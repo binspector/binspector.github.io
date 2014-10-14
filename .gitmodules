@@ -1,0 +1,9 @@
+[submodule ".themes/slash"]
+	path = .themes/slash
+	url = https://github.com/tommy351/Octopress-Theme-Slash
+[submodule ".themes/readify"]
+	path = .themes/readify
+	url = https://github.com/vladigleba/readify
+[submodule ".themes/whitespace"]
+	path = .themes/whitespace
+	url = https://github.com/lucaslew/whitespace

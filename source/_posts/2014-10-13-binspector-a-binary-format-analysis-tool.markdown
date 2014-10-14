@@ -1,0 +1,139 @@
+---
+layout: post
+title: "Binspector: A Binary Format Analysis Tool"
+date: 2014-10-13 11:17:31 -0700
+comments: true
+categories: general
+published: false
+---
+
+Binary formats and files are inescapable. Although optimal for computers to read, sussing them manually requires exacting patience. Every developer has a moment in their career with a hex editor open, staring blankly at screenfuls of `0xDEADBEEF` or UTF-8 encoded multibyte unicode. Binspector was born from such a time, when I found myself scouring JPEGs to make sure their Exif and IPTC/IIM metadata blocks were telling consistent stories. The tool has evolved into something genuinely useful, and I am excited to share it in the hopes others will benefit from it as well.
+
+<!-- more -->
+
+# Binspector's Purpose
+
+The goal of Binspector is to help bridge the gap between binary formats and the developers who wrestle with them. The two most significant ways it does this is firstly by providing a formal means of describing a binary format. Secondly, Binspector provides interactive analysis into the contents of a binary file.
+
+## Formal Description
+
+Binspector attempts to formally specify both the _interpretation_ and the _context_ of binary data. The interpretation of data is simply the value of its bits - its size, endianness, and sign all contribute. (In programming languages this is also known as a _type_.) In Binspector these are known as ***atoms***. Context is the larger scope in which the data is found: now that we know what the value _is_, what does the value _mean_? The basic contextual building block in Binspector is called a ***structure***.
+
+### Example
+```
+struct pascal_t
+{
+  unsigned 8 big length;
+  unsigned 8 big string[length];
+}
+
+struct user_name_t
+{
+  pascal_t first;
+  pascal_t last;
+}
+```
+
+Here we are describing two binary data structures and the context between them. It is easy to see that a `pascal_t` is an 8-bit, length-prefixed string of some kind. The interpretation of the bits are described in `pascal_t`: everything here is a byte. Also, the number of bytes read into `string` are determined by the number read at `length`. There is a relationship, a context, that is formally being defined. `user_name_t` is comprised of two `pascal_t`s, one for the first name and one for the last.
+
+## Analysis
+
+Binspector attempts to interpret a binary file against a format grammar. During this process the tool builds out a tree that reports to the user what it has found. This tree can then be analyzed by a user in one of several ways, the most common of which is a command-line interface.
+
+### Example
+
+Let's take the above description and apply it to the following binary data, seen here in the ever-excellent [Hex Fiend](http://ridiculousfish.com/hexfiend/):
+
+{% img left /images/binfile.png %}
+
+We would invoke Binspector with something like:
+
+```
+~$ binspector -i file.bin -t format.bfft -s user_name_t
+```
+
+Binspector will drop into a command-line interface so we can navigate the file analysis. To carry the metaphor, think of structures as folders and atoms as files:
+
+```
+$main$ ls
+(user_name_t) main
+{
+    (pascal_t) first
+    (pascal_t) last
+}
+$main$ cd first
+$main.first$ ls
+(pascal_t) first
+{
+    (u8) length: 6
+    (u8) string[6]
+}
+$main.first$ cd string
+$main.first.string$ ls
+(u8) string[6]
+{
+    (u8) [0]: 70
+    (u8) [1]: 111
+    (u8) [2]: 115
+    (u8) [3]: 116
+    (u8) [4]: 101
+    (u8) [5]: 114
+}
+```
+
+`$main$` is the current path into the analysis, and you can navigate into and out of structures with the `cd` command. Likewise, the `ls` command lists the contents of the current structure. To get information about a specific atom within the analysis, we use the `detail_field` command (or just `df`):
+
+```
+$main.first.string$ detail_field this[2]
+     path: main.first.string[2]
+   format: 8-bit unsigned
+   offset: 3
+      raw: 0x73
+    value: 115 (0x73)
+$main.first.string$
+```
+
+These details are confirmed by looking at the same byte in a hex editor:
+
+{% img left /images/binfile_s.png %}
+
+As we navigate, we can get specific information about otherwise raw data. This includes the location in the file where the information was found, the raw bits used for interpretation, and its value.
+
+(It is important to note here that the Binspector CLI is in no way POSIX compliant. It just borrows a handful of terms from that interface to make navigating with a command line more approachable.)
+
+All this is well and good, but still feels very low-level. What's needed is more meaning in a structure, the bubbling up of some values to provide a top-down understanding of what is going on. Binspector can handle that with a couple additions to the format grammar:
+
+```
+struct pascal_t
+{
+  unsigned 8 big length;
+  unsigned 8 big string[length];
+
+  summary str(@string);
+}
+
+struct user_name_t
+{
+  pascal_t first;
+  pascal_t last;
+
+  summary summaryof(first), " ", summaryof(last);
+}
+```
+
+Lines 6 and 14 now contain `summary` statements which are expressions intended to summarize the contents of a structure. `user_name_t` leverages the summaries of the structures it contains with the `summaryof` command. The resulting output in the command-line interface is now far more helpful:
+
+```
+$main$ ls
+(user_name_t) main (Foster Brereton)
+{
+    (pascal_t) first (Foster)
+    (pascal_t) last (Brereton)
+}
+```
+
+Though the use case may be fictional it is easy to see the application to real-world formats.
+
+# Open Source
+
+I am excited to make Binspector available as open source software. The repository is on GitHub and includes build scripts, sources, documentation, and some format grammars (currently known as `bfft`s). I have been compiling a list of features and changes that I would like to see happen in the tool and hope the community gets involved. More importantly I would love to see a community-built corpus of format grammars developed and shared.

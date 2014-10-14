@@ -2,10 +2,10 @@
 #      Main Configs       #
 # ----------------------- #
 
-url: http://yoursite.com
-title: My Octopress Blog
-subtitle: A blogging framework for hackers.
-author: Your Name
+url: http://stlab.github.com/binspector
+title: Binspector
+subtitle: A Binary Format Analysis Tool
+author: Foster Brereton
 simple_search: https://www.google.com/search
 description:
 
@@ -70,7 +70,7 @@ github_show_profile_link: true
 github_skip_forks: true
 
 # Twitter
-twitter_user:
+twitter_user: phostershop
 twitter_tweet_button: true
 
 # Google +1
@@ -91,11 +91,11 @@ delicious_user:
 delicious_count: 3
 
 # Disqus Comments
-disqus_short_name:
-disqus_show_comment_count: false
+disqus_short_name: binspector
+disqus_show_comment_count: true
 
 # Google Analytics
-google_analytics_tracking_id:
+google_analytics_tracking_id: UA-55696526-1
 
 # Facebook Like
-facebook_like: false
+facebook_like: true
