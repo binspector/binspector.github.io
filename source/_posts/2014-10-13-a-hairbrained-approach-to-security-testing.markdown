@@ -4,7 +4,6 @@ title: "A Hairbrained Approach to Security Testing"
 date: 2014-10-13 23:56:06 -0700
 comments: true
 categories: fuzzing format-grammar
-published: false
 ---
 
 Let's go back to a structure defined in the introductory post:
@@ -36,13 +35,11 @@ in file: format.bfft:3
 $main$
 ```
 
-Binspector (and any other application reading a `pascal_t`) needs `length` to derive the contents of `string`. More specifically, `length` is _evaluated in an expression_ during file analysis (the same cannot be said for the contents of `string`).
-
-Intelligent fuzzing is based on the observation that the more interesting values are the ones used to drive further reading of the file. With a well-formed binary and an associated format grammar, Binspector can produce a series of derivative files that have been strategically altered. (The fuzzing engine used to be a separate tool I called Hairbrain. Despite my love of the name, it was easier to maintain the tools as one codebase than keep them apart.)
+Binspector (and any other application reading a `pascal_t`) needs `length` to derive the contents of `string`. Intelligent fuzzing is based on the observation that the more interesting values are the ones used to drive further reading of the file. With a well-formed binary and an associated format grammar, Binspector can produce a series of derivative files that have been strategically altered. (The fuzzing engine used to be a separate tool I called Hairbrain. Despite my love of the name, it was easier to maintain the tools as one codebase than keep them apart.)
 
 ## Integral Attacks
 
-The first attack type starts with Binspector keeping track of the atoms in the binary that were necessary to continue analysis. Since Binspector knows the types of these atoms (that is, how they will be interpreted) it can tweak them to try and throw off file reading code. Let's take a look at what Binspector produces with our sample file and grammar:
+The first attack type starts with Binspector keeping track of the atoms in the binary that were evaluated to continue analysis. Since Binspector knows the types of these atoms (that is, how they will be interpreted) it can tweak them to try and throw off file reading code. Let's take a look at what Binspector produces with our sample file and grammar:
 
 ```
 ~/Desktop/binsample$ binspector -i file.bin -t format.bfft -s user_name_t -m fuzz
@@ -86,7 +83,7 @@ Many file formats or substructures within them are block-based. For example, a P
 IHDR | gAMA | sBIT | bKGD | oFFs | pCAL | pHYs | tIME | tEXt | IDAT | zTXt | IEND
 ```
 
-A shuffle attack is based on the observation that contiguous chunks of data may affect input code differently if they are rearranged. We know that these chunks together occupy _N_ bytes in the file. This is true regardless of the order they are in. Therefore we are free to shuffle them in-place, and we know the rest of the file should still hold up. For example what if we tried to open the above PNG that had been altered thusly:
+A shuffle attack is based on the observation that contiguous chunks of data may affect input code differently if they are rearranged. We know that these chunks together occupy _N_ bytes in the file, and this is true regardless of the order they are in. Therefore we are free to shuffle them in-place, and we know the rest of the file should still hold up. For example what if we tried to open the above PNG that had been altered thusly:
 
 ```
 IHDR | bKGD | gAMA | IDAT | oFFs | pCAL | pHYs | sBIT | tEXt | tIME | zTXt| IEND

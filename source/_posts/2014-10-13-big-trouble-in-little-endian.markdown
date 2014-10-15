@@ -4,7 +4,6 @@ title: "Big Trouble in Little Endian"
 date: 2014-10-13 21:00:07 -0700
 comments: true
 categories: format-grammar
-published: false
 ---
 
 Exif is a body of specifications related to the embedding of metadata inside images. (Interestingly enough, when embedded inside a JPEG it uses a structure based on TIFF, making for a well-formed TIFF within a JPEG.) One of the features, for better or for worse, is that Exif can be stored either big- or little-endian. It is the responsibility of the input code to detect which mode the incoming Exif is in, and to interpret ensuing values correctly.
@@ -20,7 +19,7 @@ struct tiff_t
     ...
 ```
 
-While Binspector handles endianness in atoms, the last thing I wanted to do was double-specify the format, one for each case. What I wanted was to be able to predicate the endianness of an atom in an _expression_, not just a keyword (`big` v. `little`), and to have that expression take file data into consideration in the process (`header == 0x4d4d`). So let it be done:
+While Binspector handles endianness in atoms, the last thing I wanted to do was double-specify the format, one for each endian option. What I wanted was to be able to predicate the endianness of an atom in an _expression_, not just a keyword (`big` v. `little`), and to have that expression take file data into consideration in the process (`header == 0x4d4d`). So let it be done:
 
 ```
 struct tiff_t

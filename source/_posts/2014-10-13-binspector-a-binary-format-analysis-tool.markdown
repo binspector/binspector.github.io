@@ -4,7 +4,6 @@ title: "Binspector: A Binary Format Analysis Tool"
 date: 2014-10-13 11:17:31 -0700
 comments: true
 categories: general
-published: false
 ---
 
 Binary formats and files are inescapable. Although optimal for computers to read, sussing them manually requires exacting patience. Every developer has a moment in their career with a hex editor open, staring blankly at screenfuls of `0xDEADBEEF` or UTF-8 encoded multibyte unicode. Binspector was born from such a time, when I found myself scouring JPEGs to make sure their Exif and IPTC/IIM metadata blocks were telling consistent stories. The tool has evolved into something genuinely useful, and I am excited to share it in the hopes others will benefit from it as well.
@@ -13,13 +12,16 @@ Binary formats and files are inescapable. Although optimal for computers to read
 
 # Binspector's Purpose
 
-The goal of Binspector is to help bridge the gap between binary formats and the developers who wrestle with them. The two most significant ways it does this is firstly by providing a formal means of describing a binary format. Secondly, Binspector provides interactive analysis into the contents of a binary file.
+The goal of Binspector is to help bridge the gap between binary formats and the developers who wrestle with them. It does this in many ways, but this post seeks to cover the two most significant. First, Binspector leverages a domain-specific language to formally describe a binary format. Second, the tool provides interactive analysis into the contents of a binary file.
 
 ## Formal Description
 
-Binspector attempts to formally specify both the _interpretation_ and the _context_ of binary data. The interpretation of data is simply the value of its bits - its size, endianness, and sign all contribute. (In programming languages this is also known as a _type_.) In Binspector these are known as ***atoms***. Context is the larger scope in which the data is found: now that we know what the value _is_, what does the value _mean_? The basic contextual building block in Binspector is called a ***structure***.
+Binspector seeks to formalize both the _interpretation_ and the _context_ of binary data. The interpretation of data is simply the value of its bits- its size, endianness, and sign. In Binspector these declarations are called ***atoms***. Context is the larger scope in which the data is found: now that we know what the value _is_, what does the value _mean_? The basic contextual building block in Binspector is called a ***structure***. Combined, these two attributes form the type of binary data we are dealing with.
 
 ### Example
+
+The following is a small grammar describing two structures and the relationship between them:
+
 ```
 struct pascal_t
 {
@@ -34,7 +36,9 @@ struct user_name_t
 }
 ```
 
-Here we are describing two binary data structures and the context between them. It is easy to see that a `pascal_t` is an 8-bit, length-prefixed string of some kind. The interpretation of the bits are described in `pascal_t`: everything here is a byte. Also, the number of bytes read into `string` are determined by the number read at `length`. There is a relationship, a context, that is formally being defined. `user_name_t` is comprised of two `pascal_t`s, one for the first name and one for the last.
+It is easy to see that a `pascal_t` is an 8-bit, length-prefixed string of some kind. The interpretation of the bits are described in `pascal_t`: everything here is a byte. Also there is a relationship that is defined when `string`'s value is derived in part from `length`. `user_name_t` is comprised of two `pascal_t`s, one for the first name and one for the last.
+
+It is this structured formalization (both the interpretation of binary data and the relationships between the data) that make possible the rest of what Binspector can do.
 
 ## Analysis
 
@@ -42,7 +46,7 @@ Binspector attempts to interpret a binary file against a format grammar. During 
 
 ### Example
 
-Let's take the above description and apply it to the following binary data, seen here in the ever-excellent [Hex Fiend](http://ridiculousfish.com/hexfiend/):
+Let's take the above description and apply it to the following binary data, seen here in the excellent [Hex Fiend](http://ridiculousfish.com/hexfiend/):
 
 {% img left /images/binfile.png %}
 
@@ -81,7 +85,7 @@ $main.first.string$ ls
 }
 ```
 
-`$main$` is the current path into the analysis, and you can navigate into and out of structures with the `cd` command. Likewise, the `ls` command lists the contents of the current structure. To get information about a specific atom within the analysis, we use the `detail_field` command (or just `df`):
+`$main$` is the current branch into the analysis tree, and you can navigate into and out of structures with the `cd` command. Likewise, the `ls` command lists the contents of the current structure. To get information about a specific atom within the analysis, we use the `detail_field` command (or just `df`):
 
 ```
 $main.first.string$ detail_field this[2]
@@ -97,7 +101,7 @@ These details are confirmed by looking at the same byte in a hex editor:
 
 {% img left /images/binfile_s.png %}
 
-As we navigate, we can get specific information about otherwise raw data. This includes the location in the file where the information was found, the raw bits used for interpretation, and its value.
+As we navigate, we can get specific information about otherwise raw data. This includes the location in the file where the information was found, the raw bits used for interpretation, and its value. Over a dozen analytic operations are available to users from the command-line interface.
 
 (It is important to note here that the Binspector CLI is in no way POSIX compliant. It just borrows a handful of terms from that interface to make navigating with a command line more approachable.)
 
@@ -132,8 +136,10 @@ $main$ ls
 }
 ```
 
-Though the use case may be fictional it is easy to see the application to real-world formats.
+Though the use case may be fictional, it is easy to see the general usefulness of these capabilities for real-world formats.
 
 # Open Source
 
 I am excited to make Binspector available as open source software. The repository is on GitHub and includes build scripts, sources, documentation, and some format grammars (currently known as `bfft`s). I have been compiling a list of features and changes that I would like to see happen in the tool and hope the community gets involved. More importantly I would love to see a community-built corpus of format grammars developed and shared.
+
+So please, grab a copy of the sources, kick the tires on the tool, and let me know what you think!
