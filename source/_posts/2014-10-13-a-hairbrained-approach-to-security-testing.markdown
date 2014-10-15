@@ -3,7 +3,7 @@ layout: post
 title: "A Hairbrained Approach to Security Testing"
 date: 2014-10-13 23:56:06 -0700
 comments: true
-categories: fuzzing format-grammar
+categories: format-grammar fuzzing
 ---
 
 Let's go back to a structure defined in the introductory post:
@@ -16,7 +16,7 @@ struct pascal_t
 }
 ```
 
-If you were testing an application that read a `pascal_t`, what kind of data would you feed it in an attempt to break it? One strategy might be to throw random data at the program: this is called _fuzzing_. Because reading `string` is dependent upon the value of `length`, it would follow that fuzzing `length` is more likely to surface vulnerabilities than fuzzing `string`. (If you think this problem is trivially easy, remember that the Heartbleed bug was this kind of exploitation.)
+If you were testing an application that read a `pascal_t`, what kind of data would you feed it in an attempt to break it? One strategy might be to throw random data at the program: this is called _fuzzing_. Because reading `string` is dependent upon the value of `length`, it would follow that fuzzing `length` is more likely to surface vulnerabilities than fuzzing `string`. This is a classic buffer overflow exploitation.
 
 Binspector knows a lot about a file being analyzed. As it turns out, the knowledge it collects makes this kind of intelligent fuzzing heuristic pretty straightforward to implement.
 

@@ -4,7 +4,6 @@ title: "Sentries"
 date: 2014-10-14 20:43:51 -0700
 comments: true
 categories: format-grammar sentries
-published: false
 ---
 
 Binspector can analyze a binary file and report to the user if the file is _well-formed_ or not, that is, if the file passes analysis. While `true` is a straightforward answer, `false` comes with a host of complications. Specifically, what was it about the file that caused the analysis to fail? Was there some invariant violated, a read that went off into the weeds... what? Validation works best when it fails _as fast as it can_, because the closer one halts to the actual point of failure, the more information can be gathered about it.
@@ -88,7 +87,7 @@ in file: format.bfft:3
 $main$
 ```
 
-I'll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are `main sentry barrier breach` and the point the grammar failed, namely `format.bfft:3`.
+I'll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are `main sentry barrier breach` and the point the grammar failed, namely `format.bfft:3`. Binspector was in the process of executing the line found at `format.bfft:3`, namely, the `length` of a `pascal_t`, when the sentry established by `main.length` was overrun.
 
 If the `length` value is malformed and specifies a larger block than actual data:
 
