@@ -1,0 +1,451 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Binspector: A Binary Format Analysis Tool - Binspector</title>
+  <meta name="author" content="Foster Brereton">
+
+  
+  <meta name="description" content="Binary formats and files are inescapable. Although optimal for computers to read, sussing them manually requires exacting patience. Every developer &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Fjalla+One" rel="stylesheet" type="text/css">
+<!--- MathJax Configuration -->
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-55696526-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   class="collapse-sidebar sidebar-footer" >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Binspector</a></h1>
+  
+    <h2>A Binary Format Analysis Tool</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+  
+  
+  
+  
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:binspector.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">Binspector: A Binary Format Analysis Tool</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T11:17:31-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:17 am</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Binary formats and files are inescapable. Although optimal for computers to read, sussing them manually requires exacting patience. Every developer has a moment in their career with a hex editor open, staring blankly at screenfuls of <code>0xDEADBEEF</code> or UTF-8 encoded multibyte unicode. Binspector<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup> was born when I found myself scouring JPEGs to make sure their Exif and IPTC/IIM metadata blocks were telling consistent stories. The tool has evolved into something genuinely useful, and I am excited to share it in the hopes others will benefit from it as well.</p>
+
+<!-- more -->
+
+
+<p>The goal of Binspector is to help bridge the gap between binary formats and the developers who wrestle with them. It does this in many ways, but this post seeks to cover the two most significant. First, Binspector leverages a domain-specific language to formally describe a binary format. Second, the tool provides interactive analysis into the contents of a binary file.</p>
+
+<h2>Formal Description</h2>
+
+<p>Binspector seeks to formalize both the <em>interpretation</em> and the <em>context</em> of binary data. The interpretation of data is simply the value of its bits- its size, endianness, and sign. In Binspector these declarations are called <strong><em>atoms</em></strong>. Context is the larger scope in which the data is found: now that we know what the value <em>is</em>, what does the value <em>mean</em>? The basic contextual building block in Binspector is called a <strong><em>structure</em></strong>. Combined, these two attributes form the type of binary data we are dealing with.</p>
+
+<h3>Example</h3>
+
+<p>The following is a small grammar describing two structures and the relationship between them:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  pascal_t first;
+</span><span class='line'>  pascal_t last;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It is easy to see that a <code>pascal_t</code> is a length-prefixed 8-bit string of some kind. The interpretation of the bits are described in <code>pascal_t</code>: everything here is a byte<sup id="fnref:2"><a href="#fn:2" rel="footnote">2</a></sup>. Also, there is a relationship that is defined when <code>string</code>&rsquo;s value is derived in part from <code>length</code>. <code>user_name_t</code> is comprised of two <code>pascal_t</code>s, one for the first name and one for the last. This grammar format produces an abstract syntax tree:</p>
+
+<p><img class="center" src="/images/user_name_t.png"></p>
+
+<p>It is this structured formalization (both the interpretation of binary data and the relationships between the data) that makes possible the rest of what Binspector can do. Once a format grammar has been applied to an actual binary file, this tree becomes concrete and can be analyzed.</p>
+
+<h2>Analysis</h2>
+
+<p>Binspector attempts to interpret a binary file against a format grammar. During this process the tool builds out a tree that reports to the user what it has found. This tree can then be analyzed by a user in one of several ways, the most common of which is a command-line interface.</p>
+
+<h3>Example</h3>
+
+<p>Let&rsquo;s take the above description and apply it to the following binary data, seen here in the excellent <a href="http://ridiculousfish.com/hexfiend/">Hex Fiend</a>:</p>
+
+<p><img class="left" src="/images/binfile.png"></p>
+
+<p>We would invoke Binspector with something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ binspector -i file.bin -t format.bfft -s user_name_t</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The tool will generate a concrete syntax tree based on the abstract tree defined in the format grammar:</p>
+
+<p><img class="center" src="/images/name_processed.png"></p>
+
+<p>Binspector will drop into a command-line interface so we can navigate the parse tree. To facilitate navigation, think of structures as folders and atoms as files:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$main$ ls
+</span><span class='line'>(user_name_t) main
+</span><span class='line'>{
+</span><span class='line'>    (pascal_t) first
+</span><span class='line'>    (pascal_t) last
+</span><span class='line'>}
+</span><span class='line'>$main$ cd first
+</span><span class='line'>$main.first$ ls
+</span><span class='line'>(pascal_t) first
+</span><span class='line'>{
+</span><span class='line'>    (u8) length: 6
+</span><span class='line'>    (u8) string[6]
+</span><span class='line'>}
+</span><span class='line'>$main.first$ cd string
+</span><span class='line'>$main.first.string$ ls
+</span><span class='line'>(u8) string[6]
+</span><span class='line'>{
+</span><span class='line'>    (u8) [0]: 70
+</span><span class='line'>    (u8) [1]: 111
+</span><span class='line'>    (u8) [2]: 115
+</span><span class='line'>    (u8) [3]: 116
+</span><span class='line'>    (u8) [4]: 101
+</span><span class='line'>    (u8) [5]: 114
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>$</code>s bookend the current working branch in the analysis tree, and you can navigate into and out of structures with the <code>cd</code> command. Likewise, the <code>ls</code> command lists the contents of the current structure. As we navigate, we can get specific information about otherwise raw data. For example, to see a breakdown of a specific field we use the <code>detail_field</code> command (or just <code>df</code>). These details include the location in the file the field represents, the raw bits used for interpretation, and its value:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$main.first.string$ detail_field this[2]
+</span><span class='line'>     path: main.first.string[2]
+</span><span class='line'>   format: 8-bit unsigned
+</span><span class='line'>   offset: 3
+</span><span class='line'>      raw: 0x73
+</span><span class='line'>    value: 115 (0x73)
+</span><span class='line'>$main.first.string$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These details are confirmed by looking at the same byte in a hex editor:</p>
+
+<p><img class="left" src="/images/binfile_s.png"></p>
+
+<p>Over a dozen analytic operations are available to users from the command-line interface.</p>
+
+<p>(It is important to note here that the Binspector CLI is in no way POSIX compliant. It just borrows a handful of terms from that interface to make navigating with a command line more approachable.)</p>
+
+<p>All this is well and good, but it still requires the user go pretty far into the tree to see valuable data. What&rsquo;s needed is more meaning in a structure, the bubbling up of information to better understand what is going on. Binspector can handle that with a couple additions to the format grammar:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>
+</span><span class='line'>  summary str(@string);
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  pascal_t first;
+</span><span class='line'>  pascal_t last;
+</span><span class='line'>
+</span><span class='line'>  summary summaryof(first), " ", summaryof(last);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Lines 6 and 14 now contain <code>summary</code> statements which are expressions intended to summarize the contents of a structure. <code>user_name_t</code> leverages the summaries of the structures it contains with the <code>summaryof</code> command. The resulting output in the command-line interface is now far more helpful:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$main$ ls
+</span><span class='line'>(user_name_t) main (Foster Brereton)
+</span><span class='line'>{
+</span><span class='line'>    (pascal_t) first (Foster)
+</span><span class='line'>    (pascal_t) last (Brereton)
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Though the use case may be fictional, it is easy to see the general usefulness of these capabilities for real-world formats.</p>
+
+<h1>Open Source</h1>
+
+<p>I am excited to make Binspector available as open source software. The repository is on GitHub and includes build scripts, sources, documentation, and some format grammars (currently known as <code>bfft</code>s). I have been compiling a list of features and changes that I would like to see happen in the tool and hope the community gets involved. More importantly I would love to see a community-built corpus of format grammars developed and shared.</p>
+
+<p>So please, grab a copy of the sources, kick the tires on the tool, and let me know what you think!</p>
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>Though a portmanteau of &ldquo;binary inspector&rdquo;, the <em>i</em> in Binspector is short (rhymes with &ldquo;tin&rdquo;).<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+<li id="fn:2">
+<p>The endianness specifier <code>big</code> is required even for 8-bit values; this is a limitation of the language.<a href="#fnref:2" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+
+
+  <span class="byline author vcard">Authored by <span class="fn">
+  
+    Foster Brereton
+  
+  </span></span>
+
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T11:17:31-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:17 am</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/general/'>general</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/" data-via="phostershop" data-counturl="http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-layout="button_count" data-send="false" data-width="300" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/10/13/big-trouble-in-little-endian/" title="Next Post: Big Trouble in Little Endian">Big Trouble in Little Endian &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+</div>
+
+<aside class="sidebar">
+  
+    
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Foster Brereton -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a> | Themed with <a href="https://github.com/lucaslew/whitespace">Whitespace</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'binspector';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/';
+        var disqus_url = 'http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

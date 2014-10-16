@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://stlab.github.com/binspector/blog/2014/10/14/sentries">
+  <link rel="canonical" href="http://binspector.github.io/blog/2014/10/14/sentries">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
@@ -70,7 +70,7 @@
   
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="q" value="site:stlab.github.com/binspector" />
+    <input type="hidden" name="q" value="site:binspector.github.io" />
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
@@ -102,7 +102,7 @@
 <time class='entry-date' datetime='2014-10-14T20:43:51-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:43 pm</span></time>
         
            | <a href="#disqus_thread"
-             data-disqus-identifier="http://stlab.github.com/binspector">Comments</a>
+             data-disqus-identifier="http://binspector.github.io">Comments</a>
         
       </p>
     
@@ -234,7 +234,7 @@
 </span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
 
 
-<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>.</p>
+<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>. Binspector was in the process of executing the line found at <code>format.bfft:3</code>, namely, the <code>length</code> of a <code>pascal_t</code>, when the sentry established by <code>main.length</code> was overrun.</p>
 
 <p>If the <code>length</code> value is malformed and specifies a larger block than actual data:</p>
 
@@ -287,7 +287,7 @@
     
       <div class="sharing">
   
-  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://stlab.github.com/binspector/blog/2014/10/14/sentries/" data-via="phostershop" data-counturl="http://stlab.github.com/binspector/blog/2014/10/14/sentries/" >Tweet</a>
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://binspector.github.io/blog/2014/10/14/sentries/" data-via="phostershop" data-counturl="http://binspector.github.io/blog/2014/10/14/sentries/" >Tweet</a>
   
   
   
@@ -298,6 +298,10 @@
     
     <p class="meta">
       
+        <a class="basic-alignment left" href="/blog/2014/10/13/a-hairbrained-approach-to-security-testing/" title="Previous Post: A Hairbrained Approach to Security Testing">&laquo; A Hairbrained Approach to Security Testing</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/10/15/predicated-arrays/" title="Next Post: Predicated Arrays">Predicated Arrays &raquo;</a>
       
     </p>
   </footer>
@@ -334,8 +338,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://stlab.github.com/binspector/blog/2014/10/14/sentries/';
-        var disqus_url = 'http://stlab.github.com/binspector/blog/2014/10/14/sentries/';
+        var disqus_identifier = 'http://binspector.github.io/blog/2014/10/14/sentries/';
+        var disqus_url = 'http://binspector.github.io/blog/2014/10/14/sentries/';
         var disqus_script = 'embed.js';
       
     (function () {

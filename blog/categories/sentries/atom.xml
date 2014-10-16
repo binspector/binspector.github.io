@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Sentries | Binspector]]></title>
-  <link href="http://stlab.github.com/binspector/blog/categories/sentries/atom.xml" rel="self"/>
-  <link href="http://stlab.github.com/binspector/"/>
-  <updated>2014-10-14T22:49:34-07:00</updated>
-  <id>http://stlab.github.com/binspector/</id>
+  <link href="http://binspector.github.io/blog/categories/sentries/atom.xml" rel="self"/>
+  <link href="http://binspector.github.io/"/>
+  <updated>2014-10-15T21:42:36-07:00</updated>
+  <id>http://binspector.github.io/</id>
   <author>
     <name><![CDATA[Foster Brereton]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Sentries]]></title>
-    <link href="http://stlab.github.com/binspector/blog/2014/10/14/sentries/"/>
+    <link href="http://binspector.github.io/blog/2014/10/14/sentries/"/>
     <updated>2014-10-14T20:43:51-07:00</updated>
-    <id>http://stlab.github.com/binspector/blog/2014/10/14/sentries</id>
+    <id>http://binspector.github.io/blog/2014/10/14/sentries</id>
     <content type="html"><![CDATA[<p>Binspector can analyze a binary file and report to the user if the file is <em>well-formed</em> or not, that is, if the file passes analysis. While <code>true</code> is a straightforward answer, <code>false</code> comes with a host of complications. Specifically, what was it about the file that caused the analysis to fail? Was there some invariant violated, a read that went off into the weeds&hellip; what? Validation works best when it fails <em>as fast as it can</em>, because the closer one halts to the actual point of failure, the more information can be gathered about it.</p>
 
 <p>Sentries are one way to facilitate failing as fast as possible during file validation. So how do they work?</p>
@@ -96,7 +96,7 @@ in file: format.bfft:3
 $main$
 </code></pre>
 
-<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>.</p>
+<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>. Binspector was in the process of executing the line found at <code>format.bfft:3</code>, namely, the <code>length</code> of a <code>pascal_t</code>, when the sentry established by <code>main.length</code> was overrun.</p>
 
 <p>If the <code>length</code> value is malformed and specifies a larger block than actual data:</p>
 

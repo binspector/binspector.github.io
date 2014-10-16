@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Arrays | Binspector]]></title>
+  <link href="http://binspector.github.io/blog/categories/arrays/atom.xml" rel="self"/>
+  <link href="http://binspector.github.io/"/>
+  <updated>2014-10-15T21:42:36-07:00</updated>
+  <id>http://binspector.github.io/</id>
+  <author>
+    <name><![CDATA[Foster Brereton]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Predicated Arrays]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/15/predicated-arrays/"/>
+    <updated>2014-10-15T10:20:35-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/15/predicated-arrays</id>
+    <content type="html"><![CDATA[<p>It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify the end of the array. The canonical example of this is a null-terminated C string. We call these arrays <em>predicated</em> because there is a check- a predicate- that when met denotes the end of the array. In this post we&rsquo;ll take a look at some of the tools available within Binspector to handle these kinds of arrays.</p>
+
+<!-- more -->
+
+
+<h2>Terminators</h2>
+
+<p>If an atom specifies a terminator for its array size, Binspector will continue to grow the array until the terminator is found. The terminator is then included in the array. Using the above example, a null-terminated string would take this form:</p>
+
+<pre><code>unsigned 8 big string[terminator: 0];
+</code></pre>
+
+<p>One might visualize Binspector&rsquo;s process like so:</p>
+
+<p><img class="center" src="/images/terminator.png"></p>
+
+<p>There are a handful of restrictions to the use of terminators. First, terminators are always integer values, and cannot be used for structure arrays. Also, because the terminator is appended at the end of the resulting array, it must be the same type as the atom it terminates.</p>
+
+<h2>Delimiters</h2>
+
+<p>An atom with a size delimiter is very similar to one with a terminator, however there are two distinctions between them. The first is that the delimited value is <em>not</em> included in the atom&rsquo;s resulting array. As a consequence of the this the second difference is that the delimiter&rsquo;s type need not be the same as the array it delimits.</p>
+
+<p>The most common use case for a delimited atom declaration is when Binspector should skip over some uninteresting portion of a binary file until a sought-after piece is found. For example in a JPEG grammar one might want to skip over the image data stream, requiring a delimiter field until the end of image marker is found:</p>
+
+<pre><code>struct main
+{
+    //... prior JPEG template file declaration
+    unsigned 8  big image_stream[delimiter: 0xFFD9];
+
+    unsigned 16 big eoi_marker; // will be 0xFFD9
+}
+</code></pre>
+
+<p>Here we have an 8-bit array filled with image stream data that the format grammar is uninterested in. The delimiter is a 16-bit value, which is fine because the value will not be included in <code>image_stream</code>. As noted in the example the following 16-bit value will be <code>0xFFD9</code>.</p>
+
+<p>The bit length of the delimiter is deduced from its value rounded to a byte. Like terminators, delimiters cannot be applied to structures (<em>note: why not?</em>). Finally, delimiters are far more efficient than <code>peek</code> when trying to do look-ahead processing.</p>
+
+<h2>While</h2>
+
+<p>The final predicate that can be applied to arrays is the <code>while</code> statement, which includes an expression that is evaluated after every element of the array is read. <code>while</code> statements <em>can</em> be used for the size of a structure array, so there can be many bytes read between subsequent evaluations of the <code>while</code> predicate. The most common use case for <code>while</code> predicates is via slots and signals:</p>
+
+<pre><code>struct main
+{
+  slot done = false;
+
+  other_structure_t my_array[while: !done];
+}
+</code></pre>
+
+<p>Binspector is depending on something inside <code>other_structure_t</code> to modify the <code>done</code> slot via a signal. If the signal never happens, the array will expand until the end of the binary is found, and should be considered a bug in the grammar.</p>
+]]></content>
+  </entry>
+  
+</feed>

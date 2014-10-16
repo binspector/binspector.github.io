@@ -9,7 +9,7 @@
   <meta name="author" content="Foster Brereton">
 
   
-  <meta name="description" content="Binspector can analyze a binary file and report to the user if the file is well-formed or not, that is, if the file passes analysis. While true is a &hellip;">
+  <meta name="description" content="It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://stlab.github.com/binspector">
+  <link rel="canonical" href="http://binspector.github.io">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
@@ -70,7 +70,7 @@
   
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="q" value="site:stlab.github.com/binspector" />
+    <input type="hidden" name="q" value="site:binspector.github.io" />
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
@@ -91,6 +91,43 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2014/10/15/predicated-arrays/">Predicated Arrays</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-15T10:20:35-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>15</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:20 am</span></time>
+        
+           | <a href="/blog/2014/10/15/predicated-arrays/#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io/blog/2014/10/15/predicated-arrays/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify the end of the array. The canonical example of this is a null-terminated C string. We call these arrays <em>predicated</em> because there is a check- a predicate- that when met denotes the end of the array. In this post we&rsquo;ll take a look at some of the tools available within Binspector to handle these kinds of arrays.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/10/15/predicated-arrays/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2014/10/14/sentries/">Sentries</a></h1>
     
     
@@ -103,7 +140,7 @@
 <time class='entry-date' datetime='2014-10-14T20:43:51-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:43 pm</span></time>
         
            | <a href="/blog/2014/10/14/sentries/#disqus_thread"
-             data-disqus-identifier="http://stlab.github.com/binspector/blog/2014/10/14/sentries/">Comments</a>
+             data-disqus-identifier="http://binspector.github.io/blog/2014/10/14/sentries/">Comments</a>
         
       </p>
     
@@ -119,6 +156,133 @@
   
     <footer>
       <a rel="full-article" href="/blog/2014/10/14/sentries/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/10/13/a-hairbrained-approach-to-security-testing/">A Hairbrained Approach to Security Testing</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T23:56:06-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:56 pm</span></time>
+        
+           | <a href="/blog/2014/10/13/a-hairbrained-approach-to-security-testing/#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Let&rsquo;s go back to a structure defined in the introductory post:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you were testing an application that read a <code>pascal_t</code>, what kind of data would you feed it in an attempt to break it? One strategy might be to throw random data at the program: this is called <em>fuzzing</em>. Because reading <code>string</code> is dependent upon the value of <code>length</code>, it would follow that fuzzing <code>length</code> is more likely to surface vulnerabilities than fuzzing <code>string</code>. This is a classic buffer overflow exploitation.</p>
+
+<p>Binspector knows a lot about a file being analyzed. As it turns out, the knowledge it collects makes this kind of intelligent fuzzing heuristic pretty straightforward to implement.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/10/13/a-hairbrained-approach-to-security-testing/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/10/13/big-trouble-in-little-endian/">Big Trouble in Little Endian</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T21:00:07-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>9:00 pm</span></time>
+        
+           | <a href="/blog/2014/10/13/big-trouble-in-little-endian/#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io/blog/2014/10/13/big-trouble-in-little-endian/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Exif is a body of specifications related to the embedding of metadata inside images. (Interestingly enough, when embedded inside a JPEG it uses a structure based on TIFF, making for a well-formed TIFF within a JPEG.) One of the features, for better or for worse, is that Exif can be stored either big- or little-endian. It is the responsibility of the input code to detect which mode the incoming Exif is in, and to interpret ensuing values correctly.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/10/13/big-trouble-in-little-endian/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/10/13/binspector-a-binary-format-analysis-tool/">Binspector: A Binary Format Analysis Tool</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T11:17:31-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:17 am</span></time>
+        
+           | <a href="/blog/2014/10/13/binspector-a-binary-format-analysis-tool/#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Binary formats and files are inescapable. Although optimal for computers to read, sussing them manually requires exacting patience. Every developer has a moment in their career with a hex editor open, staring blankly at screenfuls of <code>0xDEADBEEF</code> or UTF-8 encoded multibyte unicode. Binspector<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup> was born when I found myself scouring JPEGs to make sure their Exif and IPTC/IIM metadata blocks were telling consistent stories. The tool has evolved into something genuinely useful, and I am excited to share it in the hopes others will benefit from it as well.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/10/13/binspector-a-binary-format-analysis-tool/">Read on &rarr;</a>
     </footer>
   
 

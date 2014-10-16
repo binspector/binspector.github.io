@@ -1,0 +1,449 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>A Hairbrained Approach to Security Testing - Binspector</title>
+  <meta name="author" content="Foster Brereton">
+
+  
+  <meta name="description" content="Let&rsquo;s go back to a structure defined in the introductory post: 1
+2
+3
+4
+5
+struct pascal_t
+{ unsigned 8 big length; unsigned 8 big string[length &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Fjalla+One" rel="stylesheet" type="text/css">
+<!--- MathJax Configuration -->
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-55696526-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   class="collapse-sidebar sidebar-footer" >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Binspector</a></h1>
+  
+    <h2>A Binary Format Analysis Tool</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+  
+  
+  
+  
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:binspector.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">A Hairbrained Approach to Security Testing</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T23:56:06-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:56 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Let&rsquo;s go back to a structure defined in the introductory post:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you were testing an application that read a <code>pascal_t</code>, what kind of data would you feed it in an attempt to break it? One strategy might be to throw random data at the program: this is called <em>fuzzing</em>. Because reading <code>string</code> is dependent upon the value of <code>length</code>, it would follow that fuzzing <code>length</code> is more likely to surface vulnerabilities than fuzzing <code>string</code>. This is a classic buffer overflow exploitation.</p>
+
+<p>Binspector knows a lot about a file being analyzed. As it turns out, the knowledge it collects makes this kind of intelligent fuzzing heuristic pretty straightforward to implement.</p>
+
+<!-- more -->
+
+
+<p>Consider the following change to the sample binary:</p>
+
+<p><img class="left" src="/images/binfile_f.png"></p>
+
+<p>According to the format grammar, the binary file is no longer <em>well-formed</em> because the <code>length</code> does not match the amount of ensuing data. At this point, what happens during reading depends entirely on the application. For example, binspector will produce the following:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ binspector -i file.bin -t format.bfft -s user_name_t
+</span><span class='line'>error: EOF reached. Consider using the eof slot.
+</span><span class='line'>in file: format.bfft:3
+</span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Binspector (and any other application reading a <code>pascal_t</code>) needs <code>length</code> to derive the contents of <code>string</code>. Intelligent fuzzing is based on the observation that the more interesting values are the ones used to drive further reading of the file. With a well-formed binary and an associated format grammar, Binspector can produce a series of derivative files that have been strategically altered. (The fuzzing engine used to be a separate tool I called Hairbrain. Despite my love of the name, it was easier to maintain the tools as one codebase than keep them apart.)</p>
+
+<h2>Integral Attacks</h2>
+
+<p>The first attack type starts with Binspector keeping track of the atoms in the binary that were evaluated to continue analysis. Since Binspector knows the types of these atoms (that is, how they will be interpreted) it can tweak them to try and throw off file reading code. Let&rsquo;s take a look at what Binspector produces with our sample file and grammar:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~/Desktop/binsample$ binspector -i file.bin -t format.bfft -s user_name_t -m fuzz
+</span><span class='line'>Scanned 21 nodes
+</span><span class='line'>Fuzzing 2 weak points . done.
+</span><span class='line'>Generated 4 files</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Binspector has generated four files, each one a corruption of <code>file.bin</code> in a known way. It also produces an attack summary file which details what it has done:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>main.first.length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 0
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_0_z.bin
+</span><span class='line'>    &gt; file_0_o.bin
+</span><span class='line'>main.last.length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 7
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_7_z.bin
+</span><span class='line'>    &gt; file_7_o.bin</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The file is delineated per-attack. You will notice there are two atoms Binspector decided to attack: the <code>length</code>s of the two <code>pascal_t</code> structures. The lines prefixed by <code>?</code> reveal what Binspector knows about those particular atoms that are relevant to fuzzing them. The lines prefixed by <code>&gt;</code> reveal files derived from the known good file but that have been attacked. For the case of integer atoms it changes the values to all-zeroes (<code>_z</code>) and all-ones (<code>_o</code>).</p>
+
+<p>You now have four files against which you can harden the file code of your <code>pascal_t</code>-reading application, each of which may throw it completely off the rails.</p>
+
+<h2>Shuffle Attacks</h2>
+
+<p>Many file formats or substructures within them are block-based. For example, a PNG contains a series of chunks that flesh out its contents. A PNG always starts with an IHDR chunk, and always finishes with an IEND chunk, and in the middle can be a varying number of others. For example:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>IHDR | gAMA | sBIT | bKGD | oFFs | pCAL | pHYs | tIME | tEXt | IDAT | zTXt | IEND</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A shuffle attack is based on the observation that contiguous chunks of data may affect input code differently if they are rearranged. We know that these chunks together occupy <em>N</em> bytes in the file, and this is true regardless of the order they are in. Therefore we are free to shuffle them in-place, and we know the rest of the file should still hold up. For example what if we tried to open the above PNG that had been altered thusly:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>IHDR | bKGD | gAMA | IDAT | oFFs | pCAL | pHYs | sBIT | tEXt | tIME | zTXt| IEND</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Whether or not the above reordering still constitutes a valid PNG is irrelevant. What matters is <em>how input code will handle it</em>. It may look enough like a PNG to begin the file input process, only to be thrown into the weeds when it is faced with an unexpected chunk.</p>
+
+<p>Since we may not want to shuffle <em>every</em> array found in a binary, Binspector has a special keyword to enable this kind of attack. Lets modify the format grammar slightly and see what kind of fuzzing result comes out:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>
+</span><span class='line'>  summary str(@string);
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  pascal_t name[2] shuffle;
+</span><span class='line'>
+</span><span class='line'>  summary summaryof(name[0]), " ", summaryof(name[1]);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In this format grammar we have consolidated <code>first</code> and <code>last</code> into a two-element array, and have suffixed the statement with the <code>shuffle</code> keyword. This lets Binspector know that we are interested in producing a shuffle attack on what it finds. The resulting fuzz produces the following attack summary:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>main.name
+</span><span class='line'>    ? attack_type : shuffle
+</span><span class='line'>    ? array_size  : 2
+</span><span class='line'>    &gt; file_0_s_1.bin
+</span><span class='line'>main.name[0].length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 0
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_0_0_z.bin
+</span><span class='line'>    &gt; file_0_0_o.bin
+</span><span class='line'>main.name[1].length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 7
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_0_7_z.bin
+</span><span class='line'>    &gt; file_0_7_o.bin</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In a hex editor, it is easy to see the shuffle file&rsquo;s contents have been reordered:</p>
+
+<p><img class="left" src="/images/binfile_fs.png"></p>
+
+<p>In this particular case the shuffle attack is unlikely to reveal any problems with an application&rsquo;s read code. However (as is the case with PNG) it does not take much to turn an innocuous file on its head, and perhaps cause input code to nosedive in turn.</p>
+
+<p>Fuzzing as a means of security testing is as much art as it is science. Many enhancements can go into Binspector&rsquo;s current engine to make it more useful than it is (for example, producing files that have been attacked in several ways, not just one). Also, intelligent fuzzing itself should be augmented with more broad-spectrum tests, including more traditional fuzzing. Nevertheless, Binspector does provide a valuable subset of attacks, and makes them easily available to users.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+
+
+  <span class="byline author vcard">Authored by <span class="fn">
+  
+    Foster Brereton
+  
+  </span></span>
+
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-10-13T23:56:06-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>13</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>11:56 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/format-grammar/'>format-grammar</a>, <a class='category' href='/blog/categories/fuzzing/'>fuzzing</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/" data-via="phostershop" data-counturl="http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-layout="button_count" data-send="false" data-width="300" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/10/13/big-trouble-in-little-endian/" title="Previous Post: Big Trouble in Little Endian">&laquo; Big Trouble in Little Endian</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/10/14/sentries/" title="Next Post: Sentries">Sentries &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+</div>
+
+<aside class="sidebar">
+  
+    
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Foster Brereton -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a> | Themed with <a href="https://github.com/lucaslew/whitespace">Whitespace</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'binspector';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/';
+        var disqus_url = 'http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

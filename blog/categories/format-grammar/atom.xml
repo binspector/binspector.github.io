@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Format-grammar | Binspector]]></title>
-  <link href="http://stlab.github.com/binspector/blog/categories/format-grammar/atom.xml" rel="self"/>
-  <link href="http://stlab.github.com/binspector/"/>
-  <updated>2014-10-14T22:49:34-07:00</updated>
-  <id>http://stlab.github.com/binspector/</id>
+  <link href="http://binspector.github.io/blog/categories/format-grammar/atom.xml" rel="self"/>
+  <link href="http://binspector.github.io/"/>
+  <updated>2014-10-15T21:42:36-07:00</updated>
+  <id>http://binspector.github.io/</id>
   <author>
     <name><![CDATA[Foster Brereton]]></name>
     
@@ -14,10 +14,68 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Predicated Arrays]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/15/predicated-arrays/"/>
+    <updated>2014-10-15T10:20:35-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/15/predicated-arrays</id>
+    <content type="html"><![CDATA[<p>It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify the end of the array. The canonical example of this is a null-terminated C string. We call these arrays <em>predicated</em> because there is a check- a predicate- that when met denotes the end of the array. In this post we&rsquo;ll take a look at some of the tools available within Binspector to handle these kinds of arrays.</p>
+
+<!-- more -->
+
+
+<h2>Terminators</h2>
+
+<p>If an atom specifies a terminator for its array size, Binspector will continue to grow the array until the terminator is found. The terminator is then included in the array. Using the above example, a null-terminated string would take this form:</p>
+
+<pre><code>unsigned 8 big string[terminator: 0];
+</code></pre>
+
+<p>One might visualize Binspector&rsquo;s process like so:</p>
+
+<p><img class="center" src="/images/terminator.png"></p>
+
+<p>There are a handful of restrictions to the use of terminators. First, terminators are always integer values, and cannot be used for structure arrays. Also, because the terminator is appended at the end of the resulting array, it must be the same type as the atom it terminates.</p>
+
+<h2>Delimiters</h2>
+
+<p>An atom with a size delimiter is very similar to one with a terminator, however there are two distinctions between them. The first is that the delimited value is <em>not</em> included in the atom&rsquo;s resulting array. As a consequence of the this the second difference is that the delimiter&rsquo;s type need not be the same as the array it delimits.</p>
+
+<p>The most common use case for a delimited atom declaration is when Binspector should skip over some uninteresting portion of a binary file until a sought-after piece is found. For example in a JPEG grammar one might want to skip over the image data stream, requiring a delimiter field until the end of image marker is found:</p>
+
+<pre><code>struct main
+{
+    //... prior JPEG template file declaration
+    unsigned 8  big image_stream[delimiter: 0xFFD9];
+
+    unsigned 16 big eoi_marker; // will be 0xFFD9
+}
+</code></pre>
+
+<p>Here we have an 8-bit array filled with image stream data that the format grammar is uninterested in. The delimiter is a 16-bit value, which is fine because the value will not be included in <code>image_stream</code>. As noted in the example the following 16-bit value will be <code>0xFFD9</code>.</p>
+
+<p>The bit length of the delimiter is deduced from its value rounded to a byte. Like terminators, delimiters cannot be applied to structures (<em>note: why not?</em>). Finally, delimiters are far more efficient than <code>peek</code> when trying to do look-ahead processing.</p>
+
+<h2>While</h2>
+
+<p>The final predicate that can be applied to arrays is the <code>while</code> statement, which includes an expression that is evaluated after every element of the array is read. <code>while</code> statements <em>can</em> be used for the size of a structure array, so there can be many bytes read between subsequent evaluations of the <code>while</code> predicate. The most common use case for <code>while</code> predicates is via slots and signals:</p>
+
+<pre><code>struct main
+{
+  slot done = false;
+
+  other_structure_t my_array[while: !done];
+}
+</code></pre>
+
+<p>Binspector is depending on something inside <code>other_structure_t</code> to modify the <code>done</code> slot via a signal. If the signal never happens, the array will expand until the end of the binary is found, and should be considered a bug in the grammar.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Sentries]]></title>
-    <link href="http://stlab.github.com/binspector/blog/2014/10/14/sentries/"/>
+    <link href="http://binspector.github.io/blog/2014/10/14/sentries/"/>
     <updated>2014-10-14T20:43:51-07:00</updated>
-    <id>http://stlab.github.com/binspector/blog/2014/10/14/sentries</id>
+    <id>http://binspector.github.io/blog/2014/10/14/sentries</id>
     <content type="html"><![CDATA[<p>Binspector can analyze a binary file and report to the user if the file is <em>well-formed</em> or not, that is, if the file passes analysis. While <code>true</code> is a straightforward answer, <code>false</code> comes with a host of complications. Specifically, what was it about the file that caused the analysis to fail? Was there some invariant violated, a read that went off into the weeds&hellip; what? Validation works best when it fails <em>as fast as it can</em>, because the closer one halts to the actual point of failure, the more information can be gathered about it.</p>
 
 <p>Sentries are one way to facilitate failing as fast as possible during file validation. So how do they work?</p>
@@ -96,7 +154,7 @@ in file: format.bfft:3
 $main$
 </code></pre>
 
-<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>.</p>
+<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>. Binspector was in the process of executing the line found at <code>format.bfft:3</code>, namely, the <code>length</code> of a <code>pascal_t</code>, when the sentry established by <code>main.length</code> was overrun.</p>
 
 <p>If the <code>length</code> value is malformed and specifies a larger block than actual data:</p>
 
@@ -110,6 +168,210 @@ $main$
 </code></pre>
 
 <p>Notice in <em>both</em> cases, Binspector still drops you into a command-line interface. This gives the user the ability to navigate the analysis up to the point of failure in an attempt to discern where things went wrong.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[A Hairbrained Approach to Security Testing]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/"/>
+    <updated>2014-10-13T23:56:06-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing</id>
+    <content type="html"><![CDATA[<p>Let&rsquo;s go back to a structure defined in the introductory post:</p>
+
+<pre><code>struct pascal_t
+{
+  unsigned 8 big length;
+  unsigned 8 big string[length];
+}
+</code></pre>
+
+<p>If you were testing an application that read a <code>pascal_t</code>, what kind of data would you feed it in an attempt to break it? One strategy might be to throw random data at the program: this is called <em>fuzzing</em>. Because reading <code>string</code> is dependent upon the value of <code>length</code>, it would follow that fuzzing <code>length</code> is more likely to surface vulnerabilities than fuzzing <code>string</code>. This is a classic buffer overflow exploitation.</p>
+
+<p>Binspector knows a lot about a file being analyzed. As it turns out, the knowledge it collects makes this kind of intelligent fuzzing heuristic pretty straightforward to implement.</p>
+
+<!-- more -->
+
+
+<p>Consider the following change to the sample binary:</p>
+
+<p><img class="left" src="/images/binfile_f.png"></p>
+
+<p>According to the format grammar, the binary file is no longer <em>well-formed</em> because the <code>length</code> does not match the amount of ensuing data. At this point, what happens during reading depends entirely on the application. For example, binspector will produce the following:</p>
+
+<pre><code>$ binspector -i file.bin -t format.bfft -s user_name_t
+error: EOF reached. Consider using the eof slot.
+in file: format.bfft:3
+$main$
+</code></pre>
+
+<p>Binspector (and any other application reading a <code>pascal_t</code>) needs <code>length</code> to derive the contents of <code>string</code>. Intelligent fuzzing is based on the observation that the more interesting values are the ones used to drive further reading of the file. With a well-formed binary and an associated format grammar, Binspector can produce a series of derivative files that have been strategically altered. (The fuzzing engine used to be a separate tool I called Hairbrain. Despite my love of the name, it was easier to maintain the tools as one codebase than keep them apart.)</p>
+
+<h2>Integral Attacks</h2>
+
+<p>The first attack type starts with Binspector keeping track of the atoms in the binary that were evaluated to continue analysis. Since Binspector knows the types of these atoms (that is, how they will be interpreted) it can tweak them to try and throw off file reading code. Let&rsquo;s take a look at what Binspector produces with our sample file and grammar:</p>
+
+<pre><code>~/Desktop/binsample$ binspector -i file.bin -t format.bfft -s user_name_t -m fuzz
+Scanned 21 nodes
+Fuzzing 2 weak points . done.
+Generated 4 files
+</code></pre>
+
+<p>Binspector has generated four files, each one a corruption of <code>file.bin</code> in a known way. It also produces an attack summary file which details what it has done:</p>
+
+<pre><code>main.first.length
+    ? attack_type : usage
+    ? use_count   : 1
+    ? offset      : 0
+    ? bits        : 8
+    ? type        : unsigned
+    ? big_endian  : true
+    &gt; file_0_z.bin
+    &gt; file_0_o.bin
+main.last.length
+    ? attack_type : usage
+    ? use_count   : 1
+    ? offset      : 7
+    ? bits        : 8
+    ? type        : unsigned
+    ? big_endian  : true
+    &gt; file_7_z.bin
+    &gt; file_7_o.bin
+</code></pre>
+
+<p>The file is delineated per-attack. You will notice there are two atoms Binspector decided to attack: the <code>length</code>s of the two <code>pascal_t</code> structures. The lines prefixed by <code>?</code> reveal what Binspector knows about those particular atoms that are relevant to fuzzing them. The lines prefixed by <code>&gt;</code> reveal files derived from the known good file but that have been attacked. For the case of integer atoms it changes the values to all-zeroes (<code>_z</code>) and all-ones (<code>_o</code>).</p>
+
+<p>You now have four files against which you can harden the file code of your <code>pascal_t</code>-reading application, each of which may throw it completely off the rails.</p>
+
+<h2>Shuffle Attacks</h2>
+
+<p>Many file formats or substructures within them are block-based. For example, a PNG contains a series of chunks that flesh out its contents. A PNG always starts with an IHDR chunk, and always finishes with an IEND chunk, and in the middle can be a varying number of others. For example:</p>
+
+<pre><code>IHDR | gAMA | sBIT | bKGD | oFFs | pCAL | pHYs | tIME | tEXt | IDAT | zTXt | IEND
+</code></pre>
+
+<p>A shuffle attack is based on the observation that contiguous chunks of data may affect input code differently if they are rearranged. We know that these chunks together occupy <em>N</em> bytes in the file, and this is true regardless of the order they are in. Therefore we are free to shuffle them in-place, and we know the rest of the file should still hold up. For example what if we tried to open the above PNG that had been altered thusly:</p>
+
+<pre><code>IHDR | bKGD | gAMA | IDAT | oFFs | pCAL | pHYs | sBIT | tEXt | tIME | zTXt| IEND
+</code></pre>
+
+<p>Whether or not the above reordering still constitutes a valid PNG is irrelevant. What matters is <em>how input code will handle it</em>. It may look enough like a PNG to begin the file input process, only to be thrown into the weeds when it is faced with an unexpected chunk.</p>
+
+<p>Since we may not want to shuffle <em>every</em> array found in a binary, Binspector has a special keyword to enable this kind of attack. Lets modify the format grammar slightly and see what kind of fuzzing result comes out:</p>
+
+<pre><code>struct pascal_t
+{
+  unsigned 8 big length;
+  unsigned 8 big string[length];
+
+  summary str(@string);
+}
+
+struct user_name_t
+{
+  pascal_t name[2] shuffle;
+
+  summary summaryof(name[0]), " ", summaryof(name[1]);
+}
+</code></pre>
+
+<p>In this format grammar we have consolidated <code>first</code> and <code>last</code> into a two-element array, and have suffixed the statement with the <code>shuffle</code> keyword. This lets Binspector know that we are interested in producing a shuffle attack on what it finds. The resulting fuzz produces the following attack summary:</p>
+
+<pre><code>main.name
+    ? attack_type : shuffle
+    ? array_size  : 2
+    &gt; file_0_s_1.bin
+main.name[0].length
+    ? attack_type : usage
+    ? use_count   : 1
+    ? offset      : 0
+    ? bits        : 8
+    ? type        : unsigned
+    ? big_endian  : true
+    &gt; file_0_0_z.bin
+    &gt; file_0_0_o.bin
+main.name[1].length
+    ? attack_type : usage
+    ? use_count   : 1
+    ? offset      : 7
+    ? bits        : 8
+    ? type        : unsigned
+    ? big_endian  : true
+    &gt; file_0_7_z.bin
+    &gt; file_0_7_o.bin
+</code></pre>
+
+<p>In a hex editor, it is easy to see the shuffle file&rsquo;s contents have been reordered:</p>
+
+<p><img class="left" src="/images/binfile_fs.png"></p>
+
+<p>In this particular case the shuffle attack is unlikely to reveal any problems with an application&rsquo;s read code. However (as is the case with PNG) it does not take much to turn an innocuous file on its head, and perhaps cause input code to nosedive in turn.</p>
+
+<p>Fuzzing as a means of security testing is as much art as it is science. Many enhancements can go into Binspector&rsquo;s current engine to make it more useful than it is (for example, producing files that have been attacked in several ways, not just one). Also, intelligent fuzzing itself should be augmented with more broad-spectrum tests, including more traditional fuzzing. Nevertheless, Binspector does provide a valuable subset of attacks, and makes them easily available to users.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Big Trouble in Little Endian]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/13/big-trouble-in-little-endian/"/>
+    <updated>2014-10-13T21:00:07-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/13/big-trouble-in-little-endian</id>
+    <content type="html"><![CDATA[<p>Exif is a body of specifications related to the embedding of metadata inside images. (Interestingly enough, when embedded inside a JPEG it uses a structure based on TIFF, making for a well-formed TIFF within a JPEG.) One of the features, for better or for worse, is that Exif can be stored either big- or little-endian. It is the responsibility of the input code to detect which mode the incoming Exif is in, and to interpret ensuing values correctly.</p>
+
+<!-- more -->
+
+
+<p>The start of the Exif data block will always be a 16-bit value. How it is interpreted will determine if the ensuing data is big- or little-endian:</p>
+
+<pre><code>struct tiff_t
+{
+    unsigned 16 big header; // 0x4949 (little) or 0x4d4d (big)
+    ...
+</code></pre>
+
+<p>While Binspector handles endianness in atoms, the last thing I wanted to do was double-specify the format, one for each endian option. What I wanted was to be able to predicate the endianness of an atom in an <em>expression</em>, not just a keyword (<code>big</code> v. <code>little</code>), and to have that expression take file data into consideration in the process (<code>header == 0x4d4d</code>). So let it be done:</p>
+
+<pre><code>struct tiff_t
+{
+    unsigned 16 big header; // 0x4949 (little) or 0x4d4d (big)
+
+    enumerate (header)
+    {
+        0x4D4D : const BE_k = true;
+        0x4949 : const BE_k = false;
+    }
+
+    unsigned 16 BE_k tag_mark;
+
+    invariant ok_tag_mark = tag_mark == 42;
+}
+</code></pre>
+
+<p>The advantage of the <code>enumerate</code> construct above is that if <code>header</code> is neither of the two expected values, the analysis will fail. With the <code>typedef</code> operation, we can add a little syntactic sugar to make subsequent atoms even more readable:</p>
+
+<pre><code>struct tiff_t
+{
+    unsigned 16 big header; // 0x4949 (little) or 0x4d4d (big)
+
+    enumerate (header)
+    {
+        0x4D4D : const BE_k = true;
+        0x4949 : const BE_k = false;
+    }
+
+    typedef unsigned 32 BE_k long_t;
+    typedef unsigned 16 BE_k word_t;
+
+    word_t tag_mark;
+
+    invariant ok_tag_mark = tag_mark == 42;
+
+    long_t ifd_offset; // usually 8 for IFD 0
+
+    // ...and on to teasing apart the IFD structure
+}
+</code></pre>
+
+<p><code>ifd_t</code> will inherit typedefs declared in its ancestry, which means it (and its substructures) can take advantage of <code>word_t</code>, <code>long_t</code>, etc. The endian handling is limited to the top-level <code>tiff_t</code> structure, and everything it contains is as readable as if endianness was never an issue in the first place.</p>
 ]]></content>
   </entry>
   

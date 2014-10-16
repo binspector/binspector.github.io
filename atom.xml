@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Binspector]]></title>
-  <link href="http://stlab.github.com/binspector/atom.xml" rel="self"/>
-  <link href="http://stlab.github.com/binspector/"/>
-  <updated>2014-10-14T22:49:34-07:00</updated>
-  <id>http://stlab.github.com/binspector/</id>
+  <link href="http://binspector.github.io/atom.xml" rel="self"/>
+  <link href="http://binspector.github.io/"/>
+  <updated>2014-10-15T21:42:36-07:00</updated>
+  <id>http://binspector.github.io/</id>
   <author>
     <name><![CDATA[Foster Brereton]]></name>
     
@@ -14,10 +14,82 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Predicated Arrays]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/15/predicated-arrays/"/>
+    <updated>2014-10-15T10:20:35-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/15/predicated-arrays</id>
+    <content type="html"><![CDATA[<p>It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify the end of the array. The canonical example of this is a null-terminated C string. We call these arrays <em>predicated</em> because there is a check- a predicate- that when met denotes the end of the array. In this post we&rsquo;ll take a look at some of the tools available within Binspector to handle these kinds of arrays.</p>
+
+<!-- more -->
+
+
+<h2>Terminators</h2>
+
+<p>If an atom specifies a terminator for its array size, Binspector will continue to grow the array until the terminator is found. The terminator is then included in the array. Using the above example, a null-terminated string would take this form:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>unsigned 8 big string[terminator: 0];</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One might visualize Binspector&rsquo;s process like so:</p>
+
+<p><img class="center" src="http://binspector.github.io/images/terminator.png"></p>
+
+<p>There are a handful of restrictions to the use of terminators. First, terminators are always integer values, and cannot be used for structure arrays. Also, because the terminator is appended at the end of the resulting array, it must be the same type as the atom it terminates.</p>
+
+<h2>Delimiters</h2>
+
+<p>An atom with a size delimiter is very similar to one with a terminator, however there are two distinctions between them. The first is that the delimited value is <em>not</em> included in the atom&rsquo;s resulting array. As a consequence of the this the second difference is that the delimiter&rsquo;s type need not be the same as the array it delimits.</p>
+
+<p>The most common use case for a delimited atom declaration is when Binspector should skip over some uninteresting portion of a binary file until a sought-after piece is found. For example in a JPEG grammar one might want to skip over the image data stream, requiring a delimiter field until the end of image marker is found:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct main
+</span><span class='line'>{
+</span><span class='line'>    //... prior JPEG template file declaration
+</span><span class='line'>    unsigned 8  big image_stream[delimiter: 0xFFD9];
+</span><span class='line'>
+</span><span class='line'>    unsigned 16 big eoi_marker; // will be 0xFFD9
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here we have an 8-bit array filled with image stream data that the format grammar is uninterested in. The delimiter is a 16-bit value, which is fine because the value will not be included in <code>image_stream</code>. As noted in the example the following 16-bit value will be <code>0xFFD9</code>.</p>
+
+<p>The bit length of the delimiter is deduced from its value rounded to a byte. Like terminators, delimiters cannot be applied to structures (<em>note: why not?</em>). Finally, delimiters are far more efficient than <code>peek</code> when trying to do look-ahead processing.</p>
+
+<h2>While</h2>
+
+<p>The final predicate that can be applied to arrays is the <code>while</code> statement, which includes an expression that is evaluated after every element of the array is read. <code>while</code> statements <em>can</em> be used for the size of a structure array, so there can be many bytes read between subsequent evaluations of the <code>while</code> predicate. The most common use case for <code>while</code> predicates is via slots and signals:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct main
+</span><span class='line'>{
+</span><span class='line'>  slot done = false;
+</span><span class='line'>
+</span><span class='line'>  other_structure_t my_array[while: !done];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Binspector is depending on something inside <code>other_structure_t</code> to modify the <code>done</code> slot via a signal. If the signal never happens, the array will expand until the end of the binary is found, and should be considered a bug in the grammar.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Sentries]]></title>
-    <link href="http://stlab.github.com/binspector/blog/2014/10/14/sentries/"/>
+    <link href="http://binspector.github.io/blog/2014/10/14/sentries/"/>
     <updated>2014-10-14T20:43:51-07:00</updated>
-    <id>http://stlab.github.com/binspector/blog/2014/10/14/sentries</id>
+    <id>http://binspector.github.io/blog/2014/10/14/sentries</id>
     <content type="html"><![CDATA[<p>Binspector can analyze a binary file and report to the user if the file is <em>well-formed</em> or not, that is, if the file passes analysis. While <code>true</code> is a straightforward answer, <code>false</code> comes with a host of complications. Specifically, what was it about the file that caused the analysis to fail? Was there some invariant violated, a read that went off into the weeds&hellip; what? Validation works best when it fails <em>as fast as it can</em>, because the closer one halts to the actual point of failure, the more information can be gathered about it.</p>
 
 <p>Sentries are one way to facilitate failing as fast as possible during file validation. So how do they work?</p>
@@ -63,11 +135,11 @@
 
 <p>To keep our binary file up to speed with the grammar, we prefix <code>file.bin</code> with two bytes that indicate the length of the block:</p>
 
-<p><img class="left" src="http://stlab.github.com/binspector/images/binfile_l.png"></p>
+<p><img class="left" src="http://binspector.github.io/images/binfile_l.png"></p>
 
 <p>If, in the course of analyzing one of the <code>pascal_t</code>s, a <code>length</code> is larger or smaller than it should be, we won&rsquo;t find out about it until the parse is completed. Given a malformed binary file:</p>
 
-<p><img class="left" src="http://stlab.github.com/binspector/images/binfile_lbad.png"></p>
+<p><img class="left" src="http://binspector.github.io/images/binfile_lbad.png"></p>
 
 <p>The analysis result doesn&rsquo;t give us much to go on:</p>
 
@@ -143,11 +215,11 @@
 </span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
 
 
-<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>.</p>
+<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>. Binspector was in the process of executing the line found at <code>format.bfft:3</code>, namely, the <code>length</code> of a <code>pascal_t</code>, when the sentry established by <code>main.length</code> was overrun.</p>
 
 <p>If the <code>length</code> value is malformed and specifies a larger block than actual data:</p>
 
-<p><img class="left" src="http://stlab.github.com/binspector/images/binfile_lbad2.png"></p>
+<p><img class="left" src="http://binspector.github.io/images/binfile_lbad2.png"></p>
 
 <p>We get notified of that in turn:</p>
 
@@ -160,6 +232,536 @@
 
 
 <p>Notice in <em>both</em> cases, Binspector still drops you into a command-line interface. This gives the user the ability to navigate the analysis up to the point of failure in an attempt to discern where things went wrong.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[A Hairbrained Approach to Security Testing]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/"/>
+    <updated>2014-10-13T23:56:06-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing</id>
+    <content type="html"><![CDATA[<p>Let&rsquo;s go back to a structure defined in the introductory post:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you were testing an application that read a <code>pascal_t</code>, what kind of data would you feed it in an attempt to break it? One strategy might be to throw random data at the program: this is called <em>fuzzing</em>. Because reading <code>string</code> is dependent upon the value of <code>length</code>, it would follow that fuzzing <code>length</code> is more likely to surface vulnerabilities than fuzzing <code>string</code>. This is a classic buffer overflow exploitation.</p>
+
+<p>Binspector knows a lot about a file being analyzed. As it turns out, the knowledge it collects makes this kind of intelligent fuzzing heuristic pretty straightforward to implement.</p>
+
+<!-- more -->
+
+
+<p>Consider the following change to the sample binary:</p>
+
+<p><img class="left" src="http://binspector.github.io/images/binfile_f.png"></p>
+
+<p>According to the format grammar, the binary file is no longer <em>well-formed</em> because the <code>length</code> does not match the amount of ensuing data. At this point, what happens during reading depends entirely on the application. For example, binspector will produce the following:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ binspector -i file.bin -t format.bfft -s user_name_t
+</span><span class='line'>error: EOF reached. Consider using the eof slot.
+</span><span class='line'>in file: format.bfft:3
+</span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Binspector (and any other application reading a <code>pascal_t</code>) needs <code>length</code> to derive the contents of <code>string</code>. Intelligent fuzzing is based on the observation that the more interesting values are the ones used to drive further reading of the file. With a well-formed binary and an associated format grammar, Binspector can produce a series of derivative files that have been strategically altered. (The fuzzing engine used to be a separate tool I called Hairbrain. Despite my love of the name, it was easier to maintain the tools as one codebase than keep them apart.)</p>
+
+<h2>Integral Attacks</h2>
+
+<p>The first attack type starts with Binspector keeping track of the atoms in the binary that were evaluated to continue analysis. Since Binspector knows the types of these atoms (that is, how they will be interpreted) it can tweak them to try and throw off file reading code. Let&rsquo;s take a look at what Binspector produces with our sample file and grammar:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~/Desktop/binsample$ binspector -i file.bin -t format.bfft -s user_name_t -m fuzz
+</span><span class='line'>Scanned 21 nodes
+</span><span class='line'>Fuzzing 2 weak points . done.
+</span><span class='line'>Generated 4 files</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Binspector has generated four files, each one a corruption of <code>file.bin</code> in a known way. It also produces an attack summary file which details what it has done:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>main.first.length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 0
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_0_z.bin
+</span><span class='line'>    &gt; file_0_o.bin
+</span><span class='line'>main.last.length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 7
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_7_z.bin
+</span><span class='line'>    &gt; file_7_o.bin</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The file is delineated per-attack. You will notice there are two atoms Binspector decided to attack: the <code>length</code>s of the two <code>pascal_t</code> structures. The lines prefixed by <code>?</code> reveal what Binspector knows about those particular atoms that are relevant to fuzzing them. The lines prefixed by <code>&gt;</code> reveal files derived from the known good file but that have been attacked. For the case of integer atoms it changes the values to all-zeroes (<code>_z</code>) and all-ones (<code>_o</code>).</p>
+
+<p>You now have four files against which you can harden the file code of your <code>pascal_t</code>-reading application, each of which may throw it completely off the rails.</p>
+
+<h2>Shuffle Attacks</h2>
+
+<p>Many file formats or substructures within them are block-based. For example, a PNG contains a series of chunks that flesh out its contents. A PNG always starts with an IHDR chunk, and always finishes with an IEND chunk, and in the middle can be a varying number of others. For example:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>IHDR | gAMA | sBIT | bKGD | oFFs | pCAL | pHYs | tIME | tEXt | IDAT | zTXt | IEND</span></code></pre></td></tr></table></div></figure>
+
+
+<p>A shuffle attack is based on the observation that contiguous chunks of data may affect input code differently if they are rearranged. We know that these chunks together occupy <em>N</em> bytes in the file, and this is true regardless of the order they are in. Therefore we are free to shuffle them in-place, and we know the rest of the file should still hold up. For example what if we tried to open the above PNG that had been altered thusly:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>IHDR | bKGD | gAMA | IDAT | oFFs | pCAL | pHYs | sBIT | tEXt | tIME | zTXt| IEND</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Whether or not the above reordering still constitutes a valid PNG is irrelevant. What matters is <em>how input code will handle it</em>. It may look enough like a PNG to begin the file input process, only to be thrown into the weeds when it is faced with an unexpected chunk.</p>
+
+<p>Since we may not want to shuffle <em>every</em> array found in a binary, Binspector has a special keyword to enable this kind of attack. Lets modify the format grammar slightly and see what kind of fuzzing result comes out:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>
+</span><span class='line'>  summary str(@string);
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  pascal_t name[2] shuffle;
+</span><span class='line'>
+</span><span class='line'>  summary summaryof(name[0]), " ", summaryof(name[1]);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In this format grammar we have consolidated <code>first</code> and <code>last</code> into a two-element array, and have suffixed the statement with the <code>shuffle</code> keyword. This lets Binspector know that we are interested in producing a shuffle attack on what it finds. The resulting fuzz produces the following attack summary:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>main.name
+</span><span class='line'>    ? attack_type : shuffle
+</span><span class='line'>    ? array_size  : 2
+</span><span class='line'>    &gt; file_0_s_1.bin
+</span><span class='line'>main.name[0].length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 0
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_0_0_z.bin
+</span><span class='line'>    &gt; file_0_0_o.bin
+</span><span class='line'>main.name[1].length
+</span><span class='line'>    ? attack_type : usage
+</span><span class='line'>    ? use_count   : 1
+</span><span class='line'>    ? offset      : 7
+</span><span class='line'>    ? bits        : 8
+</span><span class='line'>    ? type        : unsigned
+</span><span class='line'>    ? big_endian  : true
+</span><span class='line'>    &gt; file_0_7_z.bin
+</span><span class='line'>    &gt; file_0_7_o.bin</span></code></pre></td></tr></table></div></figure>
+
+
+<p>In a hex editor, it is easy to see the shuffle file&rsquo;s contents have been reordered:</p>
+
+<p><img class="left" src="http://binspector.github.io/images/binfile_fs.png"></p>
+
+<p>In this particular case the shuffle attack is unlikely to reveal any problems with an application&rsquo;s read code. However (as is the case with PNG) it does not take much to turn an innocuous file on its head, and perhaps cause input code to nosedive in turn.</p>
+
+<p>Fuzzing as a means of security testing is as much art as it is science. Many enhancements can go into Binspector&rsquo;s current engine to make it more useful than it is (for example, producing files that have been attacked in several ways, not just one). Also, intelligent fuzzing itself should be augmented with more broad-spectrum tests, including more traditional fuzzing. Nevertheless, Binspector does provide a valuable subset of attacks, and makes them easily available to users.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Big Trouble in Little Endian]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/13/big-trouble-in-little-endian/"/>
+    <updated>2014-10-13T21:00:07-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/13/big-trouble-in-little-endian</id>
+    <content type="html"><![CDATA[<p>Exif is a body of specifications related to the embedding of metadata inside images. (Interestingly enough, when embedded inside a JPEG it uses a structure based on TIFF, making for a well-formed TIFF within a JPEG.) One of the features, for better or for worse, is that Exif can be stored either big- or little-endian. It is the responsibility of the input code to detect which mode the incoming Exif is in, and to interpret ensuing values correctly.</p>
+
+<!-- more -->
+
+
+<p>The start of the Exif data block will always be a 16-bit value. How it is interpreted will determine if the ensuing data is big- or little-endian:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct tiff_t
+</span><span class='line'>{
+</span><span class='line'>    unsigned 16 big header; // 0x4949 (little) or 0x4d4d (big)
+</span><span class='line'>    ...</span></code></pre></td></tr></table></div></figure>
+
+
+<p>While Binspector handles endianness in atoms, the last thing I wanted to do was double-specify the format, one for each endian option. What I wanted was to be able to predicate the endianness of an atom in an <em>expression</em>, not just a keyword (<code>big</code> v. <code>little</code>), and to have that expression take file data into consideration in the process (<code>header == 0x4d4d</code>). So let it be done:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct tiff_t
+</span><span class='line'>{
+</span><span class='line'>    unsigned 16 big header; // 0x4949 (little) or 0x4d4d (big)
+</span><span class='line'>
+</span><span class='line'>    enumerate (header)
+</span><span class='line'>    {
+</span><span class='line'>        0x4D4D : const BE_k = true;
+</span><span class='line'>        0x4949 : const BE_k = false;
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>    unsigned 16 BE_k tag_mark;
+</span><span class='line'>
+</span><span class='line'>    invariant ok_tag_mark = tag_mark == 42;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The advantage of the <code>enumerate</code> construct above is that if <code>header</code> is neither of the two expected values, the analysis will fail. With the <code>typedef</code> operation, we can add a little syntactic sugar to make subsequent atoms even more readable:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct tiff_t
+</span><span class='line'>{
+</span><span class='line'>    unsigned 16 big header; // 0x4949 (little) or 0x4d4d (big)
+</span><span class='line'>
+</span><span class='line'>    enumerate (header)
+</span><span class='line'>    {
+</span><span class='line'>        0x4D4D : const BE_k = true;
+</span><span class='line'>        0x4949 : const BE_k = false;
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>    typedef unsigned 32 BE_k long_t;
+</span><span class='line'>    typedef unsigned 16 BE_k word_t;
+</span><span class='line'>
+</span><span class='line'>    word_t tag_mark;
+</span><span class='line'>
+</span><span class='line'>    invariant ok_tag_mark = tag_mark == 42;
+</span><span class='line'>
+</span><span class='line'>    long_t ifd_offset; // usually 8 for IFD 0
+</span><span class='line'>
+</span><span class='line'>    // ...and on to teasing apart the IFD structure
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>ifd_t</code> will inherit typedefs declared in its ancestry, which means it (and its substructures) can take advantage of <code>word_t</code>, <code>long_t</code>, etc. The endian handling is limited to the top-level <code>tiff_t</code> structure, and everything it contains is as readable as if endianness was never an issue in the first place.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Binspector: A Binary Format Analysis Tool]]></title>
+    <link href="http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/"/>
+    <updated>2014-10-13T11:17:31-07:00</updated>
+    <id>http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool</id>
+    <content type="html"><![CDATA[<p>Binary formats and files are inescapable. Although optimal for computers to read, sussing them manually requires exacting patience. Every developer has a moment in their career with a hex editor open, staring blankly at screenfuls of <code>0xDEADBEEF</code> or UTF-8 encoded multibyte unicode. Binspector<sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup> was born when I found myself scouring JPEGs to make sure their Exif and IPTC/IIM metadata blocks were telling consistent stories. The tool has evolved into something genuinely useful, and I am excited to share it in the hopes others will benefit from it as well.</p>
+
+<!-- more -->
+
+
+<p>The goal of Binspector is to help bridge the gap between binary formats and the developers who wrestle with them. It does this in many ways, but this post seeks to cover the two most significant. First, Binspector leverages a domain-specific language to formally describe a binary format. Second, the tool provides interactive analysis into the contents of a binary file.</p>
+
+<h2>Formal Description</h2>
+
+<p>Binspector seeks to formalize both the <em>interpretation</em> and the <em>context</em> of binary data. The interpretation of data is simply the value of its bits- its size, endianness, and sign. In Binspector these declarations are called <strong><em>atoms</em></strong>. Context is the larger scope in which the data is found: now that we know what the value <em>is</em>, what does the value <em>mean</em>? The basic contextual building block in Binspector is called a <strong><em>structure</em></strong>. Combined, these two attributes form the type of binary data we are dealing with.</p>
+
+<h3>Example</h3>
+
+<p>The following is a small grammar describing two structures and the relationship between them:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  pascal_t first;
+</span><span class='line'>  pascal_t last;
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>It is easy to see that a <code>pascal_t</code> is a length-prefixed 8-bit string of some kind. The interpretation of the bits are described in <code>pascal_t</code>: everything here is a byte<sup id="fnref:2"><a href="#fn:2" rel="footnote">2</a></sup>. Also, there is a relationship that is defined when <code>string</code>&rsquo;s value is derived in part from <code>length</code>. <code>user_name_t</code> is comprised of two <code>pascal_t</code>s, one for the first name and one for the last. This grammar format produces an abstract syntax tree:</p>
+
+<p><img class="center" src="http://binspector.github.io/images/user_name_t.png"></p>
+
+<p>It is this structured formalization (both the interpretation of binary data and the relationships between the data) that makes possible the rest of what Binspector can do. Once a format grammar has been applied to an actual binary file, this tree becomes concrete and can be analyzed.</p>
+
+<h2>Analysis</h2>
+
+<p>Binspector attempts to interpret a binary file against a format grammar. During this process the tool builds out a tree that reports to the user what it has found. This tree can then be analyzed by a user in one of several ways, the most common of which is a command-line interface.</p>
+
+<h3>Example</h3>
+
+<p>Let&rsquo;s take the above description and apply it to the following binary data, seen here in the excellent <a href="http://ridiculousfish.com/hexfiend/">Hex Fiend</a>:</p>
+
+<p><img class="left" src="http://binspector.github.io/images/binfile.png"></p>
+
+<p>We would invoke Binspector with something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>~$ binspector -i file.bin -t format.bfft -s user_name_t</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The tool will generate a concrete syntax tree based on the abstract tree defined in the format grammar:</p>
+
+<p><img class="center" src="http://binspector.github.io/images/name_processed.png"></p>
+
+<p>Binspector will drop into a command-line interface so we can navigate the parse tree. To facilitate navigation, think of structures as folders and atoms as files:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$main$ ls
+</span><span class='line'>(user_name_t) main
+</span><span class='line'>{
+</span><span class='line'>    (pascal_t) first
+</span><span class='line'>    (pascal_t) last
+</span><span class='line'>}
+</span><span class='line'>$main$ cd first
+</span><span class='line'>$main.first$ ls
+</span><span class='line'>(pascal_t) first
+</span><span class='line'>{
+</span><span class='line'>    (u8) length: 6
+</span><span class='line'>    (u8) string[6]
+</span><span class='line'>}
+</span><span class='line'>$main.first$ cd string
+</span><span class='line'>$main.first.string$ ls
+</span><span class='line'>(u8) string[6]
+</span><span class='line'>{
+</span><span class='line'>    (u8) [0]: 70
+</span><span class='line'>    (u8) [1]: 111
+</span><span class='line'>    (u8) [2]: 115
+</span><span class='line'>    (u8) [3]: 116
+</span><span class='line'>    (u8) [4]: 101
+</span><span class='line'>    (u8) [5]: 114
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>$</code>s bookend the current working branch in the analysis tree, and you can navigate into and out of structures with the <code>cd</code> command. Likewise, the <code>ls</code> command lists the contents of the current structure. As we navigate, we can get specific information about otherwise raw data. For example, to see a breakdown of a specific field we use the <code>detail_field</code> command (or just <code>df</code>). These details include the location in the file the field represents, the raw bits used for interpretation, and its value:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$main.first.string$ detail_field this[2]
+</span><span class='line'>     path: main.first.string[2]
+</span><span class='line'>   format: 8-bit unsigned
+</span><span class='line'>   offset: 3
+</span><span class='line'>      raw: 0x73
+</span><span class='line'>    value: 115 (0x73)
+</span><span class='line'>$main.first.string$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These details are confirmed by looking at the same byte in a hex editor:</p>
+
+<p><img class="left" src="http://binspector.github.io/images/binfile_s.png"></p>
+
+<p>Over a dozen analytic operations are available to users from the command-line interface.</p>
+
+<p>(It is important to note here that the Binspector CLI is in no way POSIX compliant. It just borrows a handful of terms from that interface to make navigating with a command line more approachable.)</p>
+
+<p>All this is well and good, but it still requires the user go pretty far into the tree to see valuable data. What&rsquo;s needed is more meaning in a structure, the bubbling up of information to better understand what is going on. Binspector can handle that with a couple additions to the format grammar:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>
+</span><span class='line'>  summary str(@string);
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  pascal_t first;
+</span><span class='line'>  pascal_t last;
+</span><span class='line'>
+</span><span class='line'>  summary summaryof(first), " ", summaryof(last);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Lines 6 and 14 now contain <code>summary</code> statements which are expressions intended to summarize the contents of a structure. <code>user_name_t</code> leverages the summaries of the structures it contains with the <code>summaryof</code> command. The resulting output in the command-line interface is now far more helpful:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$main$ ls
+</span><span class='line'>(user_name_t) main (Foster Brereton)
+</span><span class='line'>{
+</span><span class='line'>    (pascal_t) first (Foster)
+</span><span class='line'>    (pascal_t) last (Brereton)
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Though the use case may be fictional, it is easy to see the general usefulness of these capabilities for real-world formats.</p>
+
+<h1>Open Source</h1>
+
+<p>I am excited to make Binspector available as open source software. The repository is on GitHub and includes build scripts, sources, documentation, and some format grammars (currently known as <code>bfft</code>s). I have been compiling a list of features and changes that I would like to see happen in the tool and hope the community gets involved. More importantly I would love to see a community-built corpus of format grammars developed and shared.</p>
+
+<p>So please, grab a copy of the sources, kick the tires on the tool, and let me know what you think!</p>
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>Though a portmanteau of &ldquo;binary inspector&rdquo;, the <em>i</em> in Binspector is short (rhymes with &ldquo;tin&rdquo;).<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+<li id="fn:2">
+<p>The endianness specifier <code>big</code> is required even for 8-bit values; this is a limitation of the language.<a href="#fnref:2" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>
+
 ]]></content>
   </entry>
   

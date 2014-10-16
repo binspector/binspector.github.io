@@ -3,24 +3,56 @@
   
   
   <url>
-    <loc>http://stlab.github.com/binspector/blog/2014/10/14/sentries/</loc>
+    <loc>http://binspector.github.io/blog/2014/10/15/predicated-arrays/</loc>
+    
+    <lastmod>2014-10-15T10:20:35-07:00</lastmod>
+    
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>http://binspector.github.io/blog/2014/10/14/sentries/</loc>
     
     <lastmod>2014-10-14T20:43:51-07:00</lastmod>
     
     <priority>0.8</priority>
   </url>
   
+  <url>
+    <loc>http://binspector.github.io/blog/2014/10/13/a-hairbrained-approach-to-security-testing/</loc>
+    
+    <lastmod>2014-10-13T23:56:06-07:00</lastmod>
+    
+    <priority>0.8</priority>
+  </url>
   
   <url>
-    <loc>http://stlab.github.com/binspector/blog/archives/</loc>
-    <lastmod>2014-10-14T22:49:34-07:00</lastmod>
+    <loc>http://binspector.github.io/blog/2014/10/13/big-trouble-in-little-endian/</loc>
+    
+    <lastmod>2014-10-13T21:00:07-07:00</lastmod>
+    
+    <priority>0.8</priority>
+  </url>
+  
+  <url>
+    <loc>http://binspector.github.io/blog/2014/10/13/binspector-a-binary-format-analysis-tool/</loc>
+    
+    <lastmod>2014-10-13T11:17:31-07:00</lastmod>
+    
+    <priority>0.8</priority>
+  </url>
+  
+  
+  <url>
+    <loc>http://binspector.github.io/blog/archives/</loc>
+    <lastmod>2014-10-15T21:42:36-07:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   
   <url>
-    <loc>http://stlab.github.com/binspector/</loc>
-    <lastmod>2014-10-14T22:49:34-07:00</lastmod>
+    <loc>http://binspector.github.io/</loc>
+    <lastmod>2014-10-15T21:42:36-07:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>

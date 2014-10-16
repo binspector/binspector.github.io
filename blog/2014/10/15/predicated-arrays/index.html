@@ -1,0 +1,305 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Predicated Arrays - Binspector</title>
+  <meta name="author" content="Foster Brereton">
+
+  
+  <meta name="description" content="It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://binspector.github.io/blog/2014/10/15/predicated-arrays">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Fjalla+One" rel="stylesheet" type="text/css">
+<!--- MathJax Configuration -->
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-55696526-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   class="collapse-sidebar sidebar-footer" >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Binspector</a></h1>
+  
+    <h2>A Binary Format Analysis Tool</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+  
+  
+  
+  
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:binspector.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">Predicated Arrays</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-15T10:20:35-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>15</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:20 am</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>It is normal for formats to specify an array of data that is not length-prefixed. Instead, the format usually mandates some kind of marker to signify the end of the array. The canonical example of this is a null-terminated C string. We call these arrays <em>predicated</em> because there is a check- a predicate- that when met denotes the end of the array. In this post we&rsquo;ll take a look at some of the tools available within Binspector to handle these kinds of arrays.</p>
+
+<!-- more -->
+
+
+<h2>Terminators</h2>
+
+<p>If an atom specifies a terminator for its array size, Binspector will continue to grow the array until the terminator is found. The terminator is then included in the array. Using the above example, a null-terminated string would take this form:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>unsigned 8 big string[terminator: 0];</span></code></pre></td></tr></table></div></figure>
+
+
+<p>One might visualize Binspector&rsquo;s process like so:</p>
+
+<p><img class="center" src="/images/terminator.png"></p>
+
+<p>There are a handful of restrictions to the use of terminators. First, terminators are always integer values, and cannot be used for structure arrays. Also, because the terminator is appended at the end of the resulting array, it must be the same type as the atom it terminates.</p>
+
+<h2>Delimiters</h2>
+
+<p>An atom with a size delimiter is very similar to one with a terminator, however there are two distinctions between them. The first is that the delimited value is <em>not</em> included in the atom&rsquo;s resulting array. As a consequence of the this the second difference is that the delimiter&rsquo;s type need not be the same as the array it delimits.</p>
+
+<p>The most common use case for a delimited atom declaration is when Binspector should skip over some uninteresting portion of a binary file until a sought-after piece is found. For example in a JPEG grammar one might want to skip over the image data stream, requiring a delimiter field until the end of image marker is found:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct main
+</span><span class='line'>{
+</span><span class='line'>    //... prior JPEG template file declaration
+</span><span class='line'>    unsigned 8  big image_stream[delimiter: 0xFFD9];
+</span><span class='line'>
+</span><span class='line'>    unsigned 16 big eoi_marker; // will be 0xFFD9
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here we have an 8-bit array filled with image stream data that the format grammar is uninterested in. The delimiter is a 16-bit value, which is fine because the value will not be included in <code>image_stream</code>. As noted in the example the following 16-bit value will be <code>0xFFD9</code>.</p>
+
+<p>The bit length of the delimiter is deduced from its value rounded to a byte. Like terminators, delimiters cannot be applied to structures (<em>note: why not?</em>). Finally, delimiters are far more efficient than <code>peek</code> when trying to do look-ahead processing.</p>
+
+<h2>While</h2>
+
+<p>The final predicate that can be applied to arrays is the <code>while</code> statement, which includes an expression that is evaluated after every element of the array is read. <code>while</code> statements <em>can</em> be used for the size of a structure array, so there can be many bytes read between subsequent evaluations of the <code>while</code> predicate. The most common use case for <code>while</code> predicates is via slots and signals:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct main
+</span><span class='line'>{
+</span><span class='line'>  slot done = false;
+</span><span class='line'>
+</span><span class='line'>  other_structure_t my_array[while: !done];
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Binspector is depending on something inside <code>other_structure_t</code> to modify the <code>done</code> slot via a signal. If the signal never happens, the array will expand until the end of the binary is found, and should be considered a bug in the grammar.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+
+
+  <span class="byline author vcard">Authored by <span class="fn">
+  
+    Foster Brereton
+  
+  </span></span>
+
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-10-15T10:20:35-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>15</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>10:20 am</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/arrays/'>arrays</a>, <a class='category' href='/blog/categories/format-grammar/'>format-grammar</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://binspector.github.io/blog/2014/10/15/predicated-arrays/" data-via="phostershop" data-counturl="http://binspector.github.io/blog/2014/10/15/predicated-arrays/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-layout="button_count" data-send="false" data-width="300" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/10/14/sentries/" title="Previous Post: Sentries">&laquo; Sentries</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+</div>
+
+<aside class="sidebar">
+  
+    
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Foster Brereton -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a> | Themed with <a href="https://github.com/lucaslew/whitespace">Whitespace</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'binspector';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://binspector.github.io/blog/2014/10/15/predicated-arrays/';
+        var disqus_url = 'http://binspector.github.io/blog/2014/10/15/predicated-arrays/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
