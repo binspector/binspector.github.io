@@ -1,0 +1,381 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Sentries - Binspector</title>
+  <meta name="author" content="Foster Brereton">
+
+  
+  <meta name="description" content="Binspector can analyze a binary file and report to the user if the file is well-formed or not, that is, if the file passes analysis. While true is a &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://stlab.github.com/binspector/blog/2014/10/14/sentries">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Fjalla+One" rel="stylesheet" type="text/css">
+<!--- MathJax Configuration -->
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-55696526-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   class="collapse-sidebar sidebar-footer" >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Binspector</a></h1>
+  
+    <h2>A Binary Format Analysis Tool</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+  
+  
+  
+  
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:stlab.github.com/binspector" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">Sentries</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-14T20:43:51-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:43 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://stlab.github.com/binspector">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Binspector can analyze a binary file and report to the user if the file is <em>well-formed</em> or not, that is, if the file passes analysis. While <code>true</code> is a straightforward answer, <code>false</code> comes with a host of complications. Specifically, what was it about the file that caused the analysis to fail? Was there some invariant violated, a read that went off into the weeds&hellip; what? Validation works best when it fails <em>as fast as it can</em>, because the closer one halts to the actual point of failure, the more information can be gathered about it.</p>
+
+<p>Sentries are one way to facilitate failing as fast as possible during file validation. So how do they work?</p>
+
+<!-- more -->
+
+
+<p>File formats such a PNG and TIFF contain data wrapped in length-prefixed blocks. Sometimes the format is completely block-based; sometimes it&rsquo;s just substructures that are. For our purposes lets modify our original sample format grammar to be length-prefixed:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>
+</span><span class='line'>  summary str(@string);
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 16 big length;
+</span><span class='line'>  pascal_t        first;
+</span><span class='line'>  pascal_t        last;
+</span><span class='line'>
+</span><span class='line'>  summary summaryof(first), " ", summaryof(last);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>To keep our binary file up to speed with the grammar, we prefix <code>file.bin</code> with two bytes that indicate the length of the block:</p>
+
+<p><img class="left" src="/images/binfile_l.png"></p>
+
+<p>If, in the course of analyzing one of the <code>pascal_t</code>s, a <code>length</code> is larger or smaller than it should be, we won&rsquo;t find out about it until the parse is completed. Given a malformed binary file:</p>
+
+<p><img class="left" src="/images/binfile_lbad.png"></p>
+
+<p>The analysis result doesn&rsquo;t give us much to go on:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ binspector -t format.bfft -i file.bin -s user_name_t
+</span><span class='line'>error: EOF reached. Consider using the eof slot.
+</span><span class='line'>in file: format.bfft:3
+</span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The key piece of information we need to leverage is <code>main.length</code>. If we know the scope to which that length applies, we could inform Binspector of a boundary that must be met exactly by the time that scope ends. The boundary is specified with the <code>sentry</code> declaration:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>struct pascal_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 8 big length;
+</span><span class='line'>  unsigned 8 big string[length];
+</span><span class='line'>
+</span><span class='line'>  summary str(@string);
+</span><span class='line'>}
+</span><span class='line'>
+</span><span class='line'>struct user_name_t
+</span><span class='line'>{
+</span><span class='line'>  unsigned 16 big length;
+</span><span class='line'>
+</span><span class='line'>  sentry (length)
+</span><span class='line'>  {
+</span><span class='line'>    pascal_t first;
+</span><span class='line'>    pascal_t last;
+</span><span class='line'>  }
+</span><span class='line'>
+</span><span class='line'>  summary summaryof(first), " ", summaryof(last);
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And the Binspector output is more informative:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ binspector -t format.bfft -i file.bin -s user_name_t
+</span><span class='line'>main sentry barrier breach
+</span><span class='line'>main sentry barrier breach
+</span><span class='line'>error: EOF reached. Consider using the eof slot.
+</span><span class='line'>while analyzing: main.length
+</span><span class='line'>in file: format.bfft:3
+</span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>.</p>
+
+<p>If the <code>length</code> value is malformed and specifies a larger block than actual data:</p>
+
+<p><img class="left" src="/images/binfile_lbad2.png"></p>
+
+<p>We get notified of that in turn:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>$ binspector -t format.bfft -i file.bin -s user_name_t
+</span><span class='line'>WARNING: After  sentry, read position should be 34 but instead is 18.
+</span><span class='line'>$main$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Notice in <em>both</em> cases, Binspector still drops you into a command-line interface. This gives the user the ability to navigate the analysis up to the point of failure in an attempt to discern where things went wrong.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+
+
+  <span class="byline author vcard">Authored by <span class="fn">
+  
+    Foster Brereton
+  
+  </span></span>
+
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-10-14T20:43:51-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>14</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>8:43 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/format-grammar/'>format-grammar</a>, <a class='category' href='/blog/categories/sentries/'>sentries</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://stlab.github.com/binspector/blog/2014/10/14/sentries/" data-via="phostershop" data-counturl="http://stlab.github.com/binspector/blog/2014/10/14/sentries/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-layout="button_count" data-send="false" data-width="300" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+</div>
+
+<aside class="sidebar">
+  
+    
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Foster Brereton -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a> | Themed with <a href="https://github.com/lucaslew/whitespace">Whitespace</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'binspector';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://stlab.github.com/binspector/blog/2014/10/14/sentries/';
+        var disqus_url = 'http://stlab.github.com/binspector/blog/2014/10/14/sentries/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

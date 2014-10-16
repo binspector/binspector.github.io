@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: http://stlab.github.com/binspector/sitemap.xml

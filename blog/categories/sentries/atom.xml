@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Sentries | Binspector]]></title>
+  <link href="http://stlab.github.com/binspector/blog/categories/sentries/atom.xml" rel="self"/>
+  <link href="http://stlab.github.com/binspector/"/>
+  <updated>2014-10-14T22:49:34-07:00</updated>
+  <id>http://stlab.github.com/binspector/</id>
+  <author>
+    <name><![CDATA[Foster Brereton]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Sentries]]></title>
+    <link href="http://stlab.github.com/binspector/blog/2014/10/14/sentries/"/>
+    <updated>2014-10-14T20:43:51-07:00</updated>
+    <id>http://stlab.github.com/binspector/blog/2014/10/14/sentries</id>
+    <content type="html"><![CDATA[<p>Binspector can analyze a binary file and report to the user if the file is <em>well-formed</em> or not, that is, if the file passes analysis. While <code>true</code> is a straightforward answer, <code>false</code> comes with a host of complications. Specifically, what was it about the file that caused the analysis to fail? Was there some invariant violated, a read that went off into the weeds&hellip; what? Validation works best when it fails <em>as fast as it can</em>, because the closer one halts to the actual point of failure, the more information can be gathered about it.</p>
+
+<p>Sentries are one way to facilitate failing as fast as possible during file validation. So how do they work?</p>
+
+<!-- more -->
+
+
+<p>File formats such a PNG and TIFF contain data wrapped in length-prefixed blocks. Sometimes the format is completely block-based; sometimes it&rsquo;s just substructures that are. For our purposes lets modify our original sample format grammar to be length-prefixed:</p>
+
+<pre><code>struct pascal_t
+{
+  unsigned 8 big length;
+  unsigned 8 big string[length];
+
+  summary str(@string);
+}
+
+struct user_name_t
+{
+  unsigned 16 big length;
+  pascal_t        first;
+  pascal_t        last;
+
+  summary summaryof(first), " ", summaryof(last);
+}
+</code></pre>
+
+<p>To keep our binary file up to speed with the grammar, we prefix <code>file.bin</code> with two bytes that indicate the length of the block:</p>
+
+<p><img class="left" src="/images/binfile_l.png"></p>
+
+<p>If, in the course of analyzing one of the <code>pascal_t</code>s, a <code>length</code> is larger or smaller than it should be, we won&rsquo;t find out about it until the parse is completed. Given a malformed binary file:</p>
+
+<p><img class="left" src="/images/binfile_lbad.png"></p>
+
+<p>The analysis result doesn&rsquo;t give us much to go on:</p>
+
+<pre><code>$ binspector -t format.bfft -i file.bin -s user_name_t
+error: EOF reached. Consider using the eof slot.
+in file: format.bfft:3
+$main$
+</code></pre>
+
+<p>The key piece of information we need to leverage is <code>main.length</code>. If we know the scope to which that length applies, we could inform Binspector of a boundary that must be met exactly by the time that scope ends. The boundary is specified with the <code>sentry</code> declaration:</p>
+
+<pre><code>struct pascal_t
+{
+  unsigned 8 big length;
+  unsigned 8 big string[length];
+
+  summary str(@string);
+}
+
+struct user_name_t
+{
+  unsigned 16 big length;
+
+  sentry (length)
+  {
+    pascal_t first;
+    pascal_t last;
+  }
+
+  summary summaryof(first), " ", summaryof(last);
+}
+</code></pre>
+
+<p>And the Binspector output is more informative:</p>
+
+<pre><code>$ binspector -t format.bfft -i file.bin -s user_name_t
+main sentry barrier breach
+main sentry barrier breach
+error: EOF reached. Consider using the eof slot.
+while analyzing: main.length
+in file: format.bfft:3
+$main$
+</code></pre>
+
+<p>I&rsquo;ll be the first to admit the sentry error reporting needs to be cleaned up, but let me break down what Binspector is trying to say. The two key bits of information are <code>main sentry barrier breach</code> and the point the grammar failed, namely <code>format.bfft:3</code>.</p>
+
+<p>If the <code>length</code> value is malformed and specifies a larger block than actual data:</p>
+
+<p><img class="left" src="/images/binfile_lbad2.png"></p>
+
+<p>We get notified of that in turn:</p>
+
+<pre><code>$ binspector -t format.bfft -i file.bin -s user_name_t
+WARNING: After  sentry, read position should be 34 but instead is 18.
+$main$
+</code></pre>
+
+<p>Notice in <em>both</em> cases, Binspector still drops you into a command-line interface. This gives the user the ability to navigate the analysis up to the point of failure in an attempt to discern where things went wrong.</p>
+]]></content>
+  </entry>
+  
+</feed>
