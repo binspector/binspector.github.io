@@ -1,0 +1,391 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Atoms and Structures - Binspector</title>
+  <meta name="author" content="Foster Brereton">
+
+  
+  <meta name="description" content="Binspector&rsquo;s format grammar centers around two fundamental data types: the structure and the atom. While the introductory post provided an &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://binspector.github.io/blog/2014/10/24/atoms-and-structures">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Binspector" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Fjalla+One" rel="stylesheet" type="text/css">
+<!--- MathJax Configuration -->
+<script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-55696526-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'stats.g.doubleclick.net/dc.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   class="collapse-sidebar sidebar-footer" >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Binspector</a></h1>
+  
+    <h2>A Binary Format Analysis Tool</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+  
+  
+  
+  
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:binspector.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Home</a></li>
+  <li><a href="/installation">Installation</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      
+        <h1 class="entry-title">Atoms and Structures</h1>
+      
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-10-24T16:48:59-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>24</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>4:48 pm</span></time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://binspector.github.io">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Binspector&rsquo;s format grammar centers around two fundamental data types: the <em>structure</em> and the <em>atom</em>. While the introductory post provided an overview of these two types, in this post I will explain each in more fine-grained detail, along with a couple examples.</p>
+
+<!-- more -->
+
+
+<h1>Structures</h1>
+
+<p>Structures are the containers used to describe zero or more <em>fields</em>, which themselves are either structures or atoms. Each grammar is required to have at least one structure, and the default structure Binspector will start analysis with is <code>main</code> <sup id="fnref:1"><a href="#fn:1" rel="footnote">1</a></sup>. Structures can be defined in any order in the format grammar, but no two may have the same name.</p>
+
+<p>Here is an example of a complete, well-formed and utterly boring format grammar:</p>
+
+<pre><code>struct main
+{
+}
+</code></pre>
+
+<p>In the above example we have a single structure, <code>main</code>, which is empty. Structures can refer to other structures that have already been declared, and it is through this method that relationships can be defined within a format:</p>
+
+<pre><code>struct c_string
+{
+    // empty
+}
+
+struct main
+{
+    c_string first_name;
+    c_string last_name;
+}
+</code></pre>
+
+<p>Which will result in the following structure hierarchy, where <code>first_name</code> and <code>last_name</code> are both children of <code>main</code> and siblings of one another. Binspector processes fields in the order they are defined:</p>
+
+<p><img class="center" src="/images/structures.png"></p>
+
+<p>Although we are using multiple structures to define a more complex grammar, Binspector will still process no binary data. What is missing are atoms, the second essential building block.</p>
+
+<h1>Atoms</h1>
+
+<p>Atoms are indivisible units of binary data- hence the name. Atoms provide a means of describing the type for a collection of bits: information on how the bits are to be interpreted. The atom is described with several attributes: the <em>type</em>, <em>identifier</em>, <em>size</em> and <em>offset</em>, each of which are detailed below.</p>
+
+<h2>Type</h2>
+
+<p>The type for an atom is made up of three distinct parts: sign, width, and endianness. Each atom declaration requires all three.</p>
+
+<h3>Sign</h3>
+
+<p>The sign of the atom can be one of three values: <code>signed</code>, <code>unsigned</code> or <code>float</code>, and have meaning similar to languages like C and C++. The use of <code>float</code> is restricted to atoms of 32 and 64 bits in size, and its use with other sizes will result in an error.</p>
+
+<h3>Width</h3>
+
+<p>The width of the atom is defined in the number of raw bits that make it up. Typically the values are byte-aligned (8, 16, etc.) but do not need to be. The maximum width of a single atom is 64 bits.</p>
+
+<h3>Endianness</h3>
+
+<p>The endianness of an atom can be one of two values: <code>big</code> or <code>little</code>. It is also possible to use an expression to represent the endianness of an atom. This is useful for some binary formats (e.g., tiff) where the reader of the binary file must discern the endianness of the data. In those situations the expression must return a boolean value. When the value is <code>true</code> the atom is <code>big</code> endian, otherwise it is <code>little</code> endian.</p>
+
+<p>Though unnecessary, atoms of widths 8 or less still must specify an edian interpretation. This is a limitation of the language grammar.</p>
+
+<h4>Example</h4>
+
+<pre><code>struct main
+{
+    float 32 big scale;
+}
+</code></pre>
+
+<p>Here we have a single atom in <code>main</code> named <code>scale</code> to be interpreted as a 32-bit floating-point value. We have just given substance to a template file, as we have instructed Binspector to consume and interpret the first 32 bits of some binary format. Atoms inserted into a structure will be analyzed based on the current read position, which advances atom by atom.</p>
+
+<h2>Size</h2>
+
+<p>The identifier for the atom is its name. These must be unique within a structure. Additionally no field may be named <code>main</code> or <code>this</code>.</p>
+
+<p>In addition to being singletons, atoms can also describe static or dynamic arrays. A field&rsquo;s size is an optional parameter that instruct Binspector to instantiate multiple atoms under a single field. There are several field size declarations, and they all result in contiguous arrays. The declaration types are the <em>integer</em>, <em>while</em>, <em>terminator</em>, and <em>delimiter</em>. Integer arrays will be detailed below, while the others are described in a <a href="/blog/2014/10/15/predicated-arrays/">previous post</a>. Size descriptions are appended to the field idenitifier with brackets <code>[ ]</code>. If an expression is used to describe the size of a field, it is evaluated at the time the field is to be read.</p>
+
+<h3>Integer Size</h3>
+
+<p>The integer field size is the most basic and is used to define a discrete array of entries. For example:</p>
+
+<pre><code>struct main
+{
+    unsigned 16 big magic_word[2];
+}
+</code></pre>
+
+<p>Above we have described a single field <code>magic_word</code> that interprets two 16-bit values. An array of zero elements is valid. That being said it is possible to specify the format grammar to avoid them, making output easier to read.</p>
+
+<p>It is also possible to derive the length of a field based on values previously found in the binary format. An example of this is <code>pascal_t</code>, covered in the <a href="/blog/2014/10/13/binspector-a-binary-format-analysis-tool/">introductory post</a>.</p>
+
+<h2>Offset</h2>
+
+<p>Binary files are not always formatted a contiguous way. Sometimes they specify offsets relative to locations in the data where other data can be found. An example of this is the tiff IFD metadata format, where values beyond a certain size are appended to the end of the metadata block and offsets are specified within the metadata itself as to where the extended information resides. Binspector allows for offsets as a means for fetching remote data and analyzing it as part of a structure.</p>
+
+<p>Offsets are always specified with absolute values. For binary formats that use relative offsets, the language has primitives to assist in converting between relative and absolute offsets.</p>
+
+<h3>Example</h3>
+
+<p>In the following example let us extend our <code>pascal_t</code> to include an extra field that specifies the remote location for the string data as an absolute offset:</p>
+
+<pre><code>struct pascal_remote_absolute_t
+{
+    unsigned 8  big length;
+    unsigned 32 big absolute_offset;
+    unsigned 8  big string[length] @ absolute_offset;
+}
+</code></pre>
+
+<p>In the example our first atom is the length of the string and the second is the remote offset. Since the value is absolute we can use it without modification in the third atom definition. Binspector will seek to that absolute offset within the file and proceed to read <code>length</code> 8-bit values to constitute <code>string</code>.</p>
+
+<p>In the case we are dealing with remote offsets we need to convert them to absolute offsets before Binspector can find the data correctly. In such case we need to know which field is the basis for the relative offset, and construct an expression to use its offset to compute the final, absolute offset. In a relative-offset-based remote pascal_t structure, given that the remote offset is relative to the length byte of the string, we might have:</p>
+
+<pre><code>struct pascal_remote_relative_t
+{
+    unsigned 8  big length;
+    unsigned 32 big relative_offset;
+    unsigned 8  big string[length] @ startof(@length) + relative_offset;
+}
+</code></pre>
+
+<p>In this example we use the <code>startof()</code> routine to fetch the absolute offset of the length atom in the file and use it in conjunction with the relative offset of the string to compute the absolute offset of the string data.</p>
+
+<p>Within routine calls it is necessary to refer to fields with a prefixed <code>@</code> symbol, otherwise the value of the field will be used instead of the field itself. This is loosely similar to pass-by-reference v. pass-by-value. However when the field is part of an expression the <code>@</code> should be omitted (e.g., <code>startof(main.foo.bar)</code>).</p>
+
+<p>For readability&rsquo;s sake it would be fine to use a <code>const</code> or <code>invis</code> field to construct the absolute offset before using it:</p>
+
+<pre><code>struct pascal_remote_relative_t
+{
+    unsigned 8  big length;
+    unsigned 32 big relative_offset;
+    const absolute_offset = startof(@length) + relative_offset;
+    unsigned 8  big string[length] @ absolute_offset;
+}
+</code></pre>
+
+<p>Reading remote data does not affect the read position once the reading is complete. For example given the following fields:</p>
+
+<pre><code> unsigned 8 big offset;
+ unsigned 8 big remote_data @ offset;
+ unsigned 8 big some_value;
+</code></pre>
+
+<p>The bytes for <code>offset</code> and <code>some_value</code> are adjacent to one another in the binary file. However in the analysis <code>remote_data</code> will be between them as the remote data is brought in to its interpreted location in the file at that time. In addition an analyzed structure’s starting and ending offsets (<code>startof()</code> and <code>endof()</code> values) are only affected by its nonremote (local) data, though this may change in a later version.</p>
+<div class="footnotes">
+<hr/>
+<ol>
+<li id="fn:1">
+<p>It is possible to specify a different starting structure from the command line.<a href="#fnref:1" rev="footnote">&#8617;</a></p></li>
+</ol>
+</div>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+
+
+  <span class="byline author vcard">Authored by <span class="fn">
+  
+    Foster Brereton
+  
+  </span></span>
+
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-10-24T16:48:59-07:00'><span class='date'><span class='date-month'>Oct</span> <span class='date-day'>24</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>4:48 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/atoms/'>atoms</a>, <a class='category' href='/blog/categories/format-grammar/'>format-grammar</a>, <a class='category' href='/blog/categories/structures/'>structures</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://binspector.github.io/blog/2014/10/24/atoms-and-structures/" data-via="phostershop" data-counturl="http://binspector.github.io/blog/2014/10/24/atoms-and-structures/" >Tweet</a>
+  
+  
+  
+    <div class="fb-like" data-layout="button_count" data-send="false" data-width="300" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/10/15/predicated-arrays/" title="Previous Post: Predicated Arrays">&laquo; Predicated Arrays</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+</div>
+
+<aside class="sidebar">
+  
+    
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Foster Brereton -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a> | Themed with <a href="https://github.com/lucaslew/whitespace">Whitespace</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'binspector';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://binspector.github.io/blog/2014/10/24/atoms-and-structures/';
+        var disqus_url = 'http://binspector.github.io/blog/2014/10/24/atoms-and-structures/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id; js.async = true;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
